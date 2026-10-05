@@ -1,3 +1,4 @@
+import json
 import os
 import smtplib
 import time
@@ -89,14 +90,131 @@ def reset_failed_attempts(ip):
     LOGIN_ATTEMPTS.pop(ip, None)
 
 
+BANGLADESH_DISTRICTS = {
+    'Dhaka Division': [
+        ('Dhaka', 'ঢাকা (Metro)', 60),
+        ('Gazipur', 'গাজীপুর', 80),
+        ('Narayanganj', 'নারায়ণগঞ্জ', 80),
+        ('Tangail', 'টাঙ্গাইল', 120),
+        ('Narsingdi', 'নরসিংদী', 100),
+        ('Manikganj', 'মানিকগঞ্জ', 100),
+        ('Munshiganj', 'মুন্সীগঞ্জ', 100),
+        ('Kishoreganj', 'কিশোরগঞ্জ', 120),
+        ('Faridpur', 'ফরিদপুর', 120),
+        ('Gopalganj', 'গোপালগঞ্জ', 120),
+        ('Madaripur', 'মাদারীপুর', 120),
+        ('Rajbari', 'রাজবাড়ী', 120),
+        ('Shariatpur', 'শরীয়তপুর', 120),
+    ],
+    'Chattogram Division': [
+        ('Chittagong', 'চট্টগ্রাম', 120),
+        ('Cox\'s Bazar', 'কক্সবাজার', 130),
+        ('Cumilla', 'কুমিল্লা', 110),
+        ('Feni', 'ফেনী', 110),
+        ('Brahmanbaria', 'ব্রাহ্মণবাড়িয়া', 120),
+        ('Chandpur', 'চাঁদপুর', 120),
+        ('Noakhali', 'নোয়াখালী', 120),
+        ('Lakshmipur', 'লক্ষ্মীপুর', 120),
+        ('Rangamati', 'রাঙ্গামাটি', 140),
+        ('Bandarban', 'বান্দরবান', 140),
+        ('Khagrachhari', 'খাগড়াছড়ি', 140),
+    ],
+    'Sylhet Division': [
+        ('Sylhet', 'সিলেট', 120),
+        ('Moulvibazar', 'মৌলভীবাজার', 120),
+        ('Habiganj', 'হবিগঞ্জ', 120),
+        ('Sunamganj', 'সুনামগঞ্জ', 130),
+    ],
+    'Rajshahi Division': [
+        ('Rajshahi', 'রাজশাহী', 120),
+        ('Bogura', 'বগুড়া', 120),
+        ('Pabna', 'পাবনা', 120),
+        ('Sirajganj', 'সিরাজগঞ্জ', 120),
+        ('Naogaon', 'নওগাঁ', 120),
+        ('Natore', 'নাটোর', 120),
+        ('Chapainawabganj', 'চাঁপাইনবাবগঞ্জ', 130),
+        ('Joypurhat', 'জয়পুরহাট', 120),
+    ],
+    'Khulna Division': [
+        ('Khulna', 'খুলনা', 120),
+        ('Jashore', 'যশোর', 120),
+        ('Kushtia', 'কুষ্টিয়া', 120),
+        ('Jhenaidah', 'ঝিনাইদহ', 120),
+        ('Satkhira', 'সাতক্ষীরা', 130),
+        ('Bagerhat', 'বাগেরহাট', 120),
+        ('Chuadanga', 'চুয়াডাঙ্গা', 120),
+        ('Meherpur', 'মেহেরপুর', 120),
+        ('Magura', 'মাগুরা', 120),
+        ('Narail', 'নড়াইল', 120),
+    ],
+    'Barisal Division': [
+        ('Barisal', 'বরিশাল', 120),
+        ('Patuakhali', 'পটুয়াখালী', 130),
+        ('Bhola', 'ভোলা', 130),
+        ('Pirojpur', 'পিরোজপুর', 120),
+        ('Barguna', 'বরগুনা', 130),
+        ('Jhalokathi', 'ঝালকাঠি', 120),
+    ],
+    'Rangpur Division': [
+        ('Rangpur', 'রংপুর', 120),
+        ('Dinajpur', 'দিনাজপুর', 130),
+        ('Kurigram', 'কুড়িগ্রাম', 130),
+        ('Gaibandha', 'গাইবান্ধা', 120),
+        ('Nilphamari', 'নীলফামারী', 130),
+        ('Lalmonirhat', 'লালমনিরহাট', 130),
+        ('Thakurgaon', 'ঠাকুরগাঁও', 140),
+        ('Panchagarh', 'পঞ্চগড়', 140),
+    ],
+    'Mymensingh Division': [
+        ('Mymensingh', 'ময়মনসিংহ', 110),
+        ('Jamalpur', 'জামালপুর', 120),
+        ('Netrokona', 'নেত্রকোণা', 120),
+        ('Sherpur', 'শেরপুর', 120),
+    ],
+}
+
+
+def get_district_rates(store_settings=None):
+    if store_settings is None:
+        store_settings = get_cached_settings()
+    rates = {}
+    fee_dhaka = float(store_settings.get('delivery_fee_dhaka') or 60)
+    fee_outside = float(store_settings.get('delivery_fee_outside') or 120)
+
+    for div, d_list in BANGLADESH_DISTRICTS.items():
+        for code, bn, default_fee in d_list:
+            if code == 'Dhaka':
+                rates[code] = fee_dhaka
+            else:
+                rates[code] = default_fee if default_fee != 120 else fee_outside
+
+    raw_custom = store_settings.get('district_rates')
+    if raw_custom:
+        try:
+            custom_map = json.loads(raw_custom)
+            if isinstance(custom_map, dict):
+                for k, v in custom_map.items():
+                    try:
+                        rates[k] = float(v)
+                    except (ValueError, TypeError):
+                        pass
+        except Exception:
+            pass
+    return rates
+
+
 @app.context_processor
 def inject_globals():
     cart = session.get('cart', {}) or {}
     item_count = sum(int(qty) for qty in cart.values() if str(qty).isdigit())
     settings = get_cached_settings()
+    d_rates = get_district_rates(settings)
     return {
         'cart_count': item_count,
         'store_settings': settings,
+        'bangladesh_districts': BANGLADESH_DISTRICTS,
+        'district_rates': d_rates,
+        'district_rates_json': json.dumps(d_rates),
         'is_postgres': is_postgres(),
     }
 
@@ -379,8 +497,8 @@ def checkout():
 
     store_settings = get_cached_settings()
     threshold = float(store_settings.get('free_shipping_threshold') or 3000)
-    fee_dhaka = float(store_settings.get('delivery_fee_dhaka') or 60)
-    fee_outside = float(store_settings.get('delivery_fee_outside') or 120)
+    d_rates = get_district_rates(store_settings)
+    fee_dhaka = float(d_rates.get('Dhaka', 60))
 
     # Initial default is Dhaka
     initial_fee = 0.0 if total >= threshold else fee_dhaka
@@ -413,23 +531,22 @@ def place_order():
         flash('Online payment is not available yet. Please choose Cash on Delivery.', 'error')
         return redirect(url_for('checkout'))
 
-    # Calculate delivery charge based on district and store settings
+    # Calculate delivery charge based on district rates
     store_settings = get_cached_settings()
     threshold = float(store_settings.get('free_shipping_threshold') or 3000)
-    fee_dhaka = float(store_settings.get('delivery_fee_dhaka') or 60)
-    fee_outside = float(store_settings.get('delivery_fee_outside') or 120)
+    d_rates = get_district_rates(store_settings)
 
     is_dhaka = district.lower() == 'dhaka'
+    assigned_fee = float(d_rates.get(district, 120 if not is_dhaka else 60))
+
     if is_dhaka and total >= threshold:
         delivery_fee = 0.0
-    elif is_dhaka:
-        delivery_fee = fee_dhaka
     else:
-        delivery_fee = fee_outside
+        delivery_fee = assigned_fee
 
     # Grand total includes items subtotal + delivery fee!
     grand_total = total + delivery_fee
-    delivery_eta = '2-3 Days (Dhaka Metro)' if is_dhaka else f'3-5 Days ({district})'
+    delivery_eta = '1-2 Days (Dhaka Metro)' if is_dhaka else f'3-5 Days ({district})'
     full_shipping_destination = f"{address}, {district}"
 
     db_inst = get_db()
@@ -491,14 +608,14 @@ def place_order():
 # ADMIN AUTHENTICATION
 # ==========================================
 
-@app.get('/admin/login')
+@app.get('/dingidingi/admin/login')
 def admin_login():
     if session.get('admin_logged_in'):
         return redirect(url_for('admin_dashboard'))
     return render_template('admin_login.html')
 
 
-@app.post('/admin/login')
+@app.post('/dingidingi/admin/login')
 def admin_login_submit():
     client_ip = request.remote_addr or 'unknown'
     allowed, wait_sec = check_rate_limit(client_ip)
@@ -872,8 +989,64 @@ def update_store_settings():
                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value''',
             (field, val),
         )
+
+    # Process all district-specific rates from form
+    district_rates = {}
+    for key, val in request.form.items():
+        if key.startswith('dist_rate_'):
+            d_name = key[len('dist_rate_'):]
+            try:
+                district_rates[d_name] = float(val)
+            except (ValueError, TypeError):
+                pass
+
+    if district_rates:
+        execute_write(
+            '''INSERT INTO store_settings (key, value) VALUES (?, ?)
+               ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value''',
+            ('district_rates', json.dumps(district_rates)),
+        )
+
     invalidate_settings_cache()
-    flash('Storefront configuration saved successfully.', 'success')
+    flash('Storefront configuration and delivery charges saved successfully.', 'success')
+    return redirect(url_for('admin_dashboard') + '?tab=settings')
+
+
+@app.post('/admin/settings/districts')
+@admin_required
+def update_district_rates():
+    district_rates = {}
+    for key, val in request.form.items():
+        if key.startswith('dist_rate_'):
+            d_name = key[len('dist_rate_'):]
+            try:
+                district_rates[d_name] = float(val)
+            except (ValueError, TypeError):
+                pass
+
+    # Also update base fees if provided
+    base_dhaka = request.form.get('delivery_fee_dhaka')
+    base_outside = request.form.get('delivery_fee_outside')
+    if base_dhaka:
+        execute_write(
+            '''INSERT INTO store_settings (key, value) VALUES (?, ?)
+               ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value''',
+            ('delivery_fee_dhaka', base_dhaka.strip()),
+        )
+    if base_outside:
+        execute_write(
+            '''INSERT INTO store_settings (key, value) VALUES (?, ?)
+               ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value''',
+            ('delivery_fee_outside', base_outside.strip()),
+        )
+
+    execute_write(
+        '''INSERT INTO store_settings (key, value) VALUES (?, ?)
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value''',
+        ('district_rates', json.dumps(district_rates)),
+    )
+    invalidate_settings_cache()
+    flash('District delivery charges updated successfully.', 'success')
     return redirect(url_for('admin_dashboard') + '?tab=settings')
 
 

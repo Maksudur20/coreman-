@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initSearchAndFilters();
   initModals();
+  initDistrictAdmin();
 });
 
 // Tab Switcher
@@ -297,3 +298,52 @@ function renderOrderDetails(data, container) {
     </div>
   `;
 }
+
+// District Delivery Charge Live Search & Bulk Division Applicator
+function initDistrictAdmin() {
+  const searchInput = document.getElementById('adminDistrictSearch');
+  const blocks = document.querySelectorAll('.division-block');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.toLowerCase().trim();
+      blocks.forEach(block => {
+        let hasVisibleInBlock = false;
+        const dists = block.querySelectorAll('.district-rate-item');
+        dists.forEach(d => {
+          const name = (d.getAttribute('data-name') || '').toLowerCase();
+          const bn = d.getAttribute('data-bn') || '';
+          const match = !q || name.includes(q) || bn.includes(q);
+          d.style.display = match ? 'flex' : 'none';
+          if (match) hasVisibleInBlock = true;
+        });
+        block.style.display = hasVisibleInBlock ? 'block' : 'none';
+      });
+    });
+  }
+
+  const btnApply = document.getElementById('btnApplyBulkDivision');
+  const bulkSelect = document.getElementById('bulkDivisionSelect');
+  const bulkRate = document.getElementById('bulkDivisionRate');
+
+  if (btnApply && bulkSelect && bulkRate) {
+    btnApply.addEventListener('click', () => {
+      const selectedDiv = bulkSelect.value;
+      const rateVal = parseFloat(bulkRate.value);
+      if (isNaN(rateVal) || rateVal < 0) {
+        bulkRate.focus();
+        return;
+      }
+      const targetBlock = document.querySelector(`.division-block[data-division="${selectedDiv}"]`);
+      if (targetBlock) {
+        const inputs = targetBlock.querySelectorAll('.dist-input');
+        inputs.forEach(inp => {
+          inp.value = Math.round(rateVal);
+          inp.style.background = '#ecfdf5';
+          setTimeout(() => { inp.style.background = ''; }, 600);
+        });
+      }
+    });
+  }
+}
+

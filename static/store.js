@@ -373,14 +373,24 @@ function initCheckoutDistrictSync() {
     const settings = window.COREMAN_SETTINGS || {
       feeDhaka: 60,
       feeOutside: 120,
-      freeThreshold: 3000
+      freeThreshold: 3000,
+      districtRates: {}
     };
 
     const selectedOpt = districtSelect.options[districtSelect.selectedIndex];
-    const zone = selectedOpt ? selectedOpt.getAttribute('data-zone') : 'dhaka';
-    const isDhaka = zone === 'dhaka';
+    const selectedDistrict = districtSelect.value;
+    const districtRates = settings.districtRates || {};
 
-    let fee = isDhaka ? settings.feeDhaka : settings.feeOutside;
+    let fee;
+    if (districtRates && districtRates[selectedDistrict] !== undefined) {
+      fee = parseFloat(districtRates[selectedDistrict]);
+    } else if (selectedOpt && selectedOpt.getAttribute('data-fee')) {
+      fee = parseFloat(selectedOpt.getAttribute('data-fee'));
+    } else {
+      fee = (selectedDistrict.toLowerCase() === 'dhaka') ? settings.feeDhaka : settings.feeOutside;
+    }
+
+    const isDhaka = selectedDistrict.toLowerCase() === 'dhaka';
     let isFree = false;
 
     // Inside Dhaka free delivery if subtotal >= threshold
@@ -402,7 +412,7 @@ function initCheckoutDistrictSync() {
     const finalTotalInput = document.getElementById('finalTotalInput');
 
     if (feeLabel) {
-      feeLabel.textContent = isDhaka ? 'Delivery Fee (Inside Dhaka)' : 'Delivery Fee (Outside Dhaka)';
+      feeLabel.textContent = `Delivery Fee (${selectedDistrict})`;
     }
 
     if (feeDisplay) {
@@ -418,9 +428,7 @@ function initCheckoutDistrictSync() {
     }
 
     if (zoneText) {
-      zoneText.textContent = isDhaka
-        ? `Inside Dhaka (${isFree ? 'FREE' : '৳' + Math.round(fee)})`
-        : `Outside Dhaka (${isFree ? 'FREE' : '৳' + Math.round(fee)})`;
+      zoneText.textContent = `${selectedDistrict} (${isFree ? 'FREE' : '৳' + Math.round(fee)})`;
     }
 
     if (zoneIcon) {
@@ -429,8 +437,8 @@ function initCheckoutDistrictSync() {
 
     if (etaText) {
       etaText.innerHTML = isDhaka
-        ? '<strong>Delivery ETA:</strong> 2-3 Days within Dhaka Metro'
-        : '<strong>Delivery ETA:</strong> 3-5 Days across all districts in Bangladesh';
+        ? '<strong>Delivery ETA:</strong> 1-2 Days within Dhaka Metro'
+        : `<strong>Delivery ETA:</strong> 3-5 Days delivery to ${selectedDistrict}`;
     }
 
     if (feeInput) feeInput.value = fee;

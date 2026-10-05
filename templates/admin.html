@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>COREMAN Admin Suite</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.5">
-  <link rel="stylesheet" href="{{ url_for('static', filename='polish.css') }}?v=2.5">
-  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}?v=2.5">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.6">
+  <link rel="stylesheet" href="{{ url_for('static', filename='polish.css') }}?v=2.6">
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}?v=2.6">
 </head>
 <body class="admin-body">
 
@@ -494,11 +494,11 @@
               <input type="text" name="currency" value="{{ settings.currency or '৳' }}" class="field-input" required>
             </div>
             <div class="form-field">
-              <label class="field-label">Delivery Fee (Inside Dhaka)</label>
+              <label class="field-label">Default Inside Dhaka Fee (৳)</label>
               <input type="number" name="delivery_fee_dhaka" value="{{ settings.delivery_fee_dhaka or '60' }}" class="field-input" required>
             </div>
             <div class="form-field">
-              <label class="field-label">Delivery Fee (Outside Dhaka)</label>
+              <label class="field-label">Default Outside Dhaka Fee (৳)</label>
               <input type="number" name="delivery_fee_outside" value="{{ settings.delivery_fee_outside or '120' }}" class="field-input" required>
             </div>
             <div class="form-field">
@@ -515,6 +515,71 @@
             </div>
           </div>
           <button type="submit" class="btn-dark" style="margin-top:14px;">Save Storefront Parameters</button>
+        </form>
+      </div>
+
+      <!-- District-wise Delivery Charge Management -->
+      <div class="admin-card" style="margin-top:26px;" id="districtDeliveryCard">
+        <div class="card-title-bar" style="flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3>District Delivery Charges (জেলা অনুযায়ী ডেলিভারি চার্জ)</h3>
+            <p style="font-size:12px; color:var(--core-muted); margin:4px 0 0 0;">
+              Set custom delivery fee for each of the 64 districts in Bangladesh. Changes sync live with checkout UI.
+            </p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <input type="text" id="adminDistrictSearch" placeholder="🔍 Search district / জেলা..." class="field-input" style="width:220px; padding:8px 12px; font-size:12px;">
+          </div>
+        </div>
+
+        <!-- Quick Division Bulk Applicator -->
+        <div style="background:#faf9f6; padding:14px 18px; border:1px solid var(--core-line); border-radius:4px; margin:16px 0 20px 0; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+          <span style="font-size:12px; font-weight:700; color:var(--core-ink); text-transform:uppercase; letter-spacing:0.06em;">⚡ Quick Bulk Rate:</span>
+          <select id="bulkDivisionSelect" class="field-select" style="width:auto; padding:6px 12px; font-size:12px;">
+            {% for div_name in bangladesh_districts.keys() %}
+              <option value="{{ div_name }}">{{ div_name }}</option>
+            {% endfor %}
+          </select>
+          <input type="number" id="bulkDivisionRate" placeholder="Fee (e.g. 120)" class="field-input" style="width:110px; padding:6px 10px; font-size:12px;">
+          <button type="button" id="btnApplyBulkDivision" class="btn-ghost" style="padding:6px 14px; font-size:11px; font-weight:700;">Apply To Division</button>
+        </div>
+
+        <form method="post" action="/admin/settings/districts" id="districtRatesForm">
+          <input type="hidden" name="delivery_fee_dhaka" value="{{ settings.delivery_fee_dhaka or '60' }}">
+          <input type="hidden" name="delivery_fee_outside" value="{{ settings.delivery_fee_outside or '120' }}">
+
+          <div style="display:flex; flex-direction:column; gap:24px;">
+            {% for div_name, d_list in bangladesh_districts.items() %}
+            <div class="division-block" data-division="{{ div_name }}" style="border:1px solid var(--core-line); border-radius:6px; overflow:hidden;">
+              <div style="background:#f4f3ef; padding:10px 16px; font-size:13px; font-weight:700; color:var(--core-ink); display:flex; justify-content:space-between; align-items:center;">
+                <span>{{ div_name }} ({{ d_list|length }} Districts)</span>
+                <span style="font-size:11px; font-weight:500; color:var(--core-muted);">Bangladesh</span>
+              </div>
+              <div style="padding:16px; display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:12px; background:#fff;">
+                {% for code, bn, default_fee in d_list %}
+                  {% set current_rate = district_rates.get(code, default_fee)|int %}
+                  <div class="district-rate-item" data-name="{{ code.lower() }}" data-bn="{{ bn }}" data-div="{{ div_name }}" style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#faf9f6; border:1px solid rgba(23,26,24,0.08); border-radius:4px;">
+                    <div>
+                      <div style="font-weight:700; font-size:13px; color:var(--core-ink);">{{ code }}</div>
+                      <div style="font-size:11px; color:var(--core-muted);">{{ bn }}</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                      <span style="font-weight:700; font-size:13px; color:var(--core-ink);">৳</span>
+                      <input type="number" step="1" min="0" max="1000" name="dist_rate_{{ code }}" value="{{ current_rate }}" class="field-input dist-input" data-district="{{ code }}" style="width:78px; padding:6px 8px; font-size:13px; font-weight:700; text-align:right;" required>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--core-line); display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; color:var(--core-muted);">All 64 districts configured. Changes take effect on storefront immediately.</span>
+            <button type="submit" class="btn-dark" style="padding:12px 24px; font-size:12px; letter-spacing:0.08em;">
+              SAVE DISTRICT DELIVERY CHARGES →
+            </button>
+          </div>
         </form>
       </div>
     </section>
@@ -657,6 +722,6 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='admin.js') }}?v=2.5"></script>
+  <script src="{{ url_for('static', filename='admin.js') }}?v=2.6"></script>
 </body>
 </html>

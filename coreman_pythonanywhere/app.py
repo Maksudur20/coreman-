@@ -361,14 +361,14 @@ def place_order():
     )
 
 
-@app.get('/admin/login')
+@app.get('/dingidingi/admin/login')
 def admin_login():
     if session.get('admin_logged_in'):
         return redirect(url_for('admin_dashboard'))
     return render_template('admin_login.html')
 
 
-@app.post('/admin/login')
+@app.post('/dingidingi/admin/login')
 def admin_login_submit():
     username = request.form.get('username', '').strip()
     password = request.form.get('password', '')

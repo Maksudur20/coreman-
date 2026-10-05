@@ -4,7 +4,7 @@
   <div class="auth-panel">
     <p class="eyebrow accent">ADMIN ACCESS</p>
     <h1>Admin Login</h1>
-    <form method="post" action="/admin/login" class="admin-form single">
+    <form method="post" action="{{ url_for('admin_login') }}" class="admin-form single">
       <label>
         Username
         <input type="text" name="username" required>

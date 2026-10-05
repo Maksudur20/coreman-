@@ -8,14 +8,14 @@ def test_admin_requires_login():
     client = app.test_client()
     response = client.get('/admin', follow_redirects=False)
     assert response.status_code == 302
-    assert response.headers['Location'].endswith('/admin/login')
+    assert response.headers['Location'].endswith('/dingidingi/admin/login')
 
 
 def test_login_page_loads():
     client = app.test_client()
-    response = client.get('/admin/login')
+    response = client.get('/dingidingi/admin/login')
     assert response.status_code == 200
-    assert b'Admin Login' in response.data
+    assert b'Admin Portal' in response.data or b'Admin Login' in response.data
 
 
 def test_checkout_order_success_flow():
@@ -38,7 +38,7 @@ def test_checkout_order_success_flow():
 
 def test_admin_can_upload_product_image():
     client = app.test_client()
-    login = client.post('/admin/login', data={'username': 'admin', 'password': 'Coreman@2026!'}, follow_redirects=False)
+    login = client.post('/dingidingi/admin/login', data={'username': 'admin', 'password': 'Coreman@2026!'}, follow_redirects=False)
     assert login.status_code == 302
 
     image = io.BytesIO(b'fake-image-content')
