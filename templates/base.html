@@ -3,18 +3,25 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>COREMAN</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='polish.css') }}">
+    <title>{{ store_settings.store_name if store_settings and store_settings.store_name else 'COREMAN' }} — Modern Essentials</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.4">
+    <link rel="stylesheet" href="{{ url_for('static', filename='polish.css') }}?v=2.4">
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+    <link rel="dns-prefetch" href="https://images.unsplash.com">
   </head>
   <body>
+    {% if store_settings and store_settings.announcement %}
+      <div class="announcement-bar">
+        <span>{{ store_settings.announcement }}</span>
+      </div>
+    {% endif %}
+
     <header class="topbar">
-      <a class="logo" href="/">COREMAN</a>
+      <a class="logo" href="/">{{ store_settings.store_name if store_settings and store_settings.store_name else 'COREMAN' }}</a>
       <nav>
         <a href="/">Home</a>
         <a href="/#shop">Shop</a>
         <a href="/cart">Cart <span class="cart-pill">{{ cart_count }}</span></a>
-        <a href="/admin">Admin</a>
       </nav>
     </header>
 
@@ -31,10 +38,17 @@
     {% block content %}{% endblock %}
 
     <footer class="site-footer">
-      <b>COREMAN</b>
+      <b>{{ store_settings.store_name if store_settings and store_settings.store_name else 'COREMAN' }}</b>
       <p>Modern essentials for everyday confidence.</p>
+      {% if store_settings and (store_settings.contact_phone or store_settings.contact_email) %}
+        <p class="footer-contact">
+          {% if store_settings.contact_phone %}<span>📞 {{ store_settings.contact_phone }}</span>{% endif %}
+          {% if store_settings.contact_email %}<span>✉️ {{ store_settings.contact_email }}</span>{% endif %}
+        </p>
+      {% endif %}
       <small>© 2026 COREMAN. All rights reserved.</small>
     </footer>
+
+    <script src="{{ url_for('static', filename='store.js') }}?v=2.3"></script>
   </body>
 </html>
-

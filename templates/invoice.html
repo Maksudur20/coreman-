@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Invoice #{{ order.id }} - COREMAN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      padding: 40px 20px;
+      line-height: 1.5;
+    }
+
+    .invoice-card {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 48px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+
+    .invoice-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    .brand-title {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      color: #0f172a;
+      text-transform: uppercase;
+    }
+
+    .brand-subtitle {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    .invoice-meta {
+      text-align: right;
+    }
+
+    .invoice-tag {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #64748b;
+    }
+
+    .invoice-id {
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .invoice-date {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .addresses-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      margin-bottom: 36px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .address-box {
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .customer-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+
+    .customer-info {
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.6;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 8px;
+    }
+
+    .status-paid {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .status-pending {
+      background: #fef3c7;
+      color: #b45309;
+    }
+
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 32px;
+    }
+
+    .items-table th {
+      background: #f1f5f9;
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #475569;
+      border-bottom: 1px solid #cbd5e1;
+    }
+
+    .items-table td {
+      padding: 14px 16px;
+      font-size: 14px;
+      color: #1e293b;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .items-table th.right, .items-table td.right {
+      text-align: right;
+    }
+
+    .totals-area {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 40px;
+    }
+
+    .totals-table {
+      width: 300px;
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .totals-row.grand-total {
+      border-top: 2px solid #0f172a;
+      margin-top: 8px;
+      padding-top: 12px;
+      font-size: 18px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .invoice-footer {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .print-bar {
+      max-width: 800px;
+      margin: 0 auto 20px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-print {
+      background: #0f172a;
+      color: #ffffff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn-back {
+      color: #64748b;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .invoice-card {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+      }
+      .print-bar {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-bar">
+    <a href="/admin?tab=orders" class="btn-back">← Back to Admin Panel</a>
+    <button onclick="window.print()" class="btn-print">🖨️ Print / Save as PDF</button>
+  </div>
+
+  <div class="invoice-card">
+    <div class="invoice-header">
+      <div>
+        <div class="brand-title">COREMAN</div>
+        <div class="brand-subtitle">Modern Essentials Storefront</div>
+      </div>
+      <div class="invoice-meta">
+        <div class="invoice-tag">Customer Invoice</div>
+        <div class="invoice-id">#{{ order.id }}</div>
+        <div class="invoice-date">Date: {{ order.created_at }}</div>
+      </div>
+    </div>
+
+    <div class="addresses-grid">
+      <div class="address-box">
+        <div class="section-label">Bill & Ship To</div>
+        <div class="customer-name">{{ order.name }}</div>
+        <div class="customer-info">
+          Phone: {{ order.phone }}<br>
+          Email: {{ order.email or 'N/A' }}<br>
+          Address: {{ order.address }}<br>
+          ETA: {{ order.estimated_delivery or '3-4 days' }}
+        </div>
+      </div>
+      <div class="address-box">
+        <div class="section-label">Payment & Order Info</div>
+        <div class="customer-info">
+          Payment Method: <strong>{{ order.payment_method }}</strong><br>
+          Order Status: <strong>{{ order.status }}</strong><br>
+          {% if order.payment_status == 'Paid' %}
+            <span class="status-badge status-paid">Payment: Paid</span>
+          {% else %}
+            <span class="status-badge status-pending">Payment: {{ order.payment_status }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>Item Description</th>
+          <th class="right">Unit Price</th>
+          <th class="right">Qty</th>
+          <th class="right">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td>
+            <strong>{{ item.name }}</strong>
+          </td>
+          <td class="right">৳{{ '%.0f'|format(item.price) }}</td>
+          <td class="right">{{ item.qty }}</td>
+          <td class="right">৳{{ '%.0f'|format(item.price * item.qty) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="totals-area">
+      <div class="totals-table">
+        <div class="totals-row">
+          <span>Subtotal</span>
+          <span>৳{{ '%.0f'|format(order.total) }}</span>
+        </div>
+        <div class="totals-row">
+          <span>Delivery</span>
+          <span>Included (COD)</span>
+        </div>
+        <div class="totals-row grand-total">
+          <span>Grand Total</span>
+          <span>৳{{ '%.0f'|format(order.total) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="invoice-footer">
+      <div>Thank you for choosing COREMAN. For inquiries, email support@coreman.com</div>
+      <div>Authorized Receipt</div>
+    </div>
+  </div>
+</body>
+</html>

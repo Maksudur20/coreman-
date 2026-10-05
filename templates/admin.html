@@ -1,113 +1,662 @@
-{% extends 'base.html' %}
-{% block content %}
-<main class="admin-shell">
-  <div class="admin-header">
-    <div>
-      <p class="eyebrow muted">ADMIN CONTROL</p>
-      <h1>COREMAN Dashboard</h1>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>COREMAN Admin Suite</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.5">
+  <link rel="stylesheet" href="{{ url_for('static', filename='polish.css') }}?v=2.5">
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}?v=2.5">
+</head>
+<body class="admin-body">
+
+  <!-- Top Admin Bar styled identically to Frontend Topbar -->
+  <header class="admin-header-bar">
+    <div class="admin-brand-group">
+      <a class="admin-logo" href="/admin">COREMAN</a>
+      <span class="admin-tag">ADMIN</span>
+      <div class="db-status-pill">
+        <span class="dot"></span>
+        <span>{{ 'Supabase Cloud (PostgreSQL)' if is_postgres else 'Local SQLite' }}</span>
+      </div>
     </div>
-    <a class="btn ghost" href="/admin/logout">Logout</a>
-  </div>
 
-  <section class="admin-panel">
-    <h2>Add Product</h2>
-    <form method="post" action="/admin/products/add" enctype="multipart/form-data" class="admin-form">
-      <label>
-        Product Name
-        <input name="name" required>
-      </label>
-      <label>
-        Category
-        <input name="category" required>
-      </label>
-      <label>
-        Price
-        <input name="price" type="number" step="0.01" required>
-      </label>
-      <label>
-        Upload Image
-        <input name="image" type="file" accept="image/*">
-      </label>
-      <label>
-        Or use image URL
-        <input name="image_url" type="url" placeholder="https://example.com/image.jpg">
-      </label>
-      <button class="btn dark" type="submit">Add Product</button>
-    </form>
-  </section>
+    <nav class="admin-nav">
+      <a href="?tab=dashboard" class="nav-link active" data-tab="dashboard">Dashboard</a>
+      <a href="?tab=orders" class="nav-link" data-tab="orders">Orders ({{ stats.total_orders }})</a>
+      <a href="?tab=products" class="nav-link" data-tab="products">Products ({{ stats.total_products }})</a>
+      <a href="?tab=customers" class="nav-link" data-tab="customers">Customers ({{ stats.total_customers }})</a>
+      <a href="?tab=settings" class="nav-link" data-tab="settings">Settings & Security</a>
+    </nav>
 
-  <section class="admin-panel">
-    <h2>Product Inventory</h2>
-    <div class="inventory-list">
-      {% for product in products %}
-      <div class="inventory-item">
-        <div>
-          <strong>{{ product.name }}</strong>
-          <span>{{ product.category }}</span>
+    <div class="admin-top-actions">
+      <a href="/" target="_blank" class="btn-storefront">↗ View Store</a>
+      <a href="/admin/logout" class="btn-signout">Sign Out</a>
+    </div>
+  </header>
+
+  <!-- Main Work Surface -->
+  <main class="admin-main-wrap">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="admin-flash-list">
+          {% for category, message in messages %}
+            <div class="admin-flash-msg is-{{ category }}">{{ message }}</div>
+          {% endfor %}
         </div>
-        <form method="post" action="/admin/products/{{ product.id }}/update" class="mini-form">
-          <input type="number" step="0.01" name="price" value="{{ product.price }}" required>
-          <button type="submit">Update Price</button>
+      {% endif %}
+    {% endwith %}
+
+    <!-- ==========================================
+         TAB 1: EXECUTIVE DASHBOARD
+         ========================================== -->
+    <section class="tab-pane" id="tab-dashboard">
+      <div class="admin-section-head">
+        <div>
+          <p class="eyebrow accent" style="margin-bottom:4px;">MANAGEMENT OVERVIEW</p>
+          <h2>Store Performance</h2>
+        </div>
+        <span>COREMAN / 2026</span>
+      </div>
+
+      <!-- KPI Metrics -->
+      <div class="kpi-row">
+        <div class="kpi-box">
+          <div class="kpi-eyebrow">Total Revenue</div>
+          <div class="kpi-number">৳{{ '%.0f'|format(stats.total_revenue) }}</div>
+          <div class="kpi-hint">Net fulfilled & pending sales</div>
+        </div>
+
+        <div class="kpi-box">
+          <div class="kpi-eyebrow">Total Orders</div>
+          <div class="kpi-number">{{ stats.total_orders }}</div>
+          <div class="kpi-hint {% if stats.pending_orders > 0 %}highlight{% endif %}">
+            {{ stats.pending_orders }} Pending fulfillment
+          </div>
+        </div>
+
+        <div class="kpi-box">
+          <div class="kpi-eyebrow">Active Products</div>
+          <div class="kpi-number">{{ stats.total_products }}</div>
+          <div class="kpi-hint">{{ stats.low_stock_count }} Low Stock Alerts</div>
+        </div>
+
+        <div class="kpi-box">
+          <div class="kpi-eyebrow">Total Customers</div>
+          <div class="kpi-number">{{ stats.total_customers }}</div>
+          <div class="kpi-hint">Average Order: ৳{{ '%.0f'|format(stats.aov) }}</div>
+        </div>
+      </div>
+
+      <!-- Grid: Recent Orders & Status Breakdown -->
+      <div style="display:grid; grid-template-columns: 2fr 1fr; gap:26px;">
+        <div class="admin-card">
+          <div class="card-title-bar">
+            <h3>Recent Orders</h3>
+            <a href="?tab=orders" class="btn-ghost" style="padding:6px 12px; font-size:10px;">All Orders</a>
+          </div>
+
+          <div class="admin-table-wrap">
+            <table class="admin-data-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>Total</th>
+                  <th>Payment</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for o in recent_orders %}
+                <tr>
+                  <td><strong>#{{ o.id }}</strong></td>
+                  <td>
+                    <div><strong>{{ o.name }}</strong></div>
+                    <div style="font-size:11px; color:var(--core-muted);">{{ o.phone }}</div>
+                  </td>
+                  <td><strong>৳{{ '%.0f'|format(o.total) }}</strong></td>
+                  <td>
+                    <span class="status-pill {{ 'delivered' if o.payment_status == 'Paid' else 'pending' }}">
+                      {{ o.payment_status }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="status-pill {{ o.status.lower() }}">{{ o.status }}</span>
+                  </td>
+                  <td>
+                    <button class="btn-ghost btn-view-order" data-id="{{ o.id }}" style="padding:4px 10px; font-size:10px;">Details</button>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="6" style="text-align:center; padding:30px; color:var(--core-muted);">No orders recorded yet.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:24px;">
+          <!-- Status Distribution -->
+          <div class="admin-card">
+            <div class="card-title-bar">
+              <h3>Order Statuses</h3>
+            </div>
+            <div class="breakdown-row">
+              {% for st, count in stats.status_breakdown.items() %}
+              {% set pct = (count / stats.total_orders * 100) if stats.total_orders > 0 else 0 %}
+              <div>
+                <div class="bar-label-group">
+                  <span>{{ st }}</span>
+                  <span style="color:var(--core-muted);">{{ count }} ({{ '%.0f'|format(pct) }}%)</span>
+                </div>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width: {{ pct }}%; background:
+                    {% if st == 'Pending' %}#f59e0b
+                    {% elif st == 'Processing' %}#0284c7
+                    {% elif st == 'Packed' %}#7e22ce
+                    {% elif st == 'Shipped' %}#0891b2
+                    {% elif st == 'Delivered' %}#16a34a
+                    {% else %}#dc2626{% endif %};">
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Inventory Alerts -->
+          <div class="admin-card">
+            <div class="card-title-bar">
+              <h3>Inventory Health</h3>
+            </div>
+            {% if low_stock_items %}
+              <div style="display:flex; flex-direction:column; gap:10px; font-size:13px;">
+                {% for p in low_stock_items %}
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--core-line); padding-bottom:6px;">
+                  <span>{{ p.name }}</span>
+                  <span style="color:#b45309; font-weight:700;">Stock: {{ p.stock }}</span>
+                </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div style="color:#15803d; font-size:13px;">✓ All catalog items have healthy stock levels.</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 2: ORDER MANAGEMENT
+         ========================================== -->
+    <section class="tab-pane" id="tab-orders" style="display:none;">
+      <div class="admin-section-head">
+        <div>
+          <p class="eyebrow accent" style="margin-bottom:4px;">ORDERS DIRECTORY</p>
+          <h2>Manage Customer Orders</h2>
+        </div>
+        <span>{{ orders|length }} TOTAL ORDERS</span>
+      </div>
+
+      <div class="filter-row">
+        <div class="filter-left">
+          <input type="text" id="orderSearch" class="admin-input search" placeholder="Search orders by ID, name, phone, address...">
+          <select id="orderStatusFilter" class="admin-select">
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="processing">Processing</option>
+            <option value="packed">Packed</option>
+            <option value="shipped">Shipped</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <select id="orderPaymentFilter" class="admin-select">
+            <option value="all">All Payments</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="admin-table-wrap">
+        <table class="admin-data-table">
+          <thead>
+            <tr>
+              <th>Order #</th>
+              <th>Date</th>
+              <th>Customer</th>
+              <th>Shipping Address</th>
+              <th>Total</th>
+              <th>Payment</th>
+              <th>Update Status</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for order in orders %}
+            <tr class="order-row" data-status="{{ order.status.lower() }}" data-payment="{{ order.payment_status.lower() }}">
+              <td><strong>#{{ order.id }}</strong></td>
+              <td style="color:var(--core-muted); font-size:12px;">{{ order.created_date or 'Recent' }}</td>
+              <td>
+                <div style="font-weight:700;">{{ order.name }}</div>
+                <div style="font-size:12px; color:var(--core-muted);"><a href="tel:{{ order.phone }}" style="color:var(--core-accent); text-decoration:none;">{{ order.phone }}</a></div>
+              </td>
+              <td>
+                <div style="max-width:220px; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ order.address }}">{{ order.address }}</div>
+                <div style="font-size:11px; color:#b45309;">ETA: {{ order.estimated_delivery or '3-4 days' }}</div>
+              </td>
+              <td>
+                <strong style="font-size:15px;">৳{{ '%.0f'|format(order.total) }}</strong>
+              </td>
+              <td>
+                <div style="font-size:11px; color:var(--core-muted);">{{ order.payment_method }}</div>
+                <span class="status-pill {{ 'delivered' if order.payment_status == 'Paid' else 'pending' }}">
+                  {{ order.payment_status }}
+                </span>
+              </td>
+              <td>
+                <form method="post" action="/admin/orders/{{ order.id }}/update" style="display:flex; gap:6px; align-items:center;">
+                  <select name="status" class="admin-select" style="padding:4px 8px; font-size:11px;">
+                    <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
+                    <option value="Processing" {% if order.status == 'Processing' %}selected{% endif %}>Processing</option>
+                    <option value="Packed" {% if order.status == 'Packed' %}selected{% endif %}>Packed</option>
+                    <option value="Shipped" {% if order.status == 'Shipped' %}selected{% endif %}>Shipped</option>
+                    <option value="Delivered" {% if order.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+                    <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                  </select>
+                  <select name="payment_status" class="admin-select" style="padding:4px 8px; font-size:11px;">
+                    <option value="Pending" {% if order.payment_status == 'Pending' %}selected{% endif %}>Pending</option>
+                    <option value="Paid" {% if order.payment_status == 'Paid' %}selected{% endif %}>Paid</option>
+                    <option value="Cancelled" {% if order.payment_status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                  </select>
+                  <button type="submit" class="btn-dark" style="padding:4px 8px; font-size:10px;">Save</button>
+                </form>
+              </td>
+              <td style="text-align:right;">
+                <div style="display:inline-flex; gap:6px;">
+                  <button class="btn-ghost btn-view-order" data-id="{{ order.id }}" style="padding:4px 10px; font-size:10px;">Details</button>
+                  <a href="/admin/orders/{{ order.id }}/invoice" target="_blank" class="btn-ghost" style="padding:4px 10px; font-size:10px;">Invoice</a>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="8" style="text-align:center; padding:32px; color:var(--core-muted);">No orders recorded.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 3: PRODUCT & INVENTORY MANAGEMENT
+         ========================================== -->
+    <section class="tab-pane" id="tab-products" style="display:none;">
+      <div class="admin-section-head">
+        <div>
+          <p class="eyebrow accent" style="margin-bottom:4px;">CATALOG MANAGEMENT</p>
+          <h2>Products & Inventory</h2>
+        </div>
+        <button class="btn-dark" onclick="openModal('addProductModal')">+ Add New Product</button>
+      </div>
+
+      <div class="filter-row">
+        <div class="filter-left">
+          <input type="text" id="prodSearch" class="admin-input search" placeholder="Search catalog by title, category...">
+          <select id="prodCategoryFilter" class="admin-select">
+            <option value="all">All Categories</option>
+            {% for cat in categories %}
+              <option value="{{ cat }}">{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="admin-table-wrap">
+        <table class="admin-data-table">
+          <thead>
+            <tr>
+              <th>Image</th>
+              <th>Product Title & Category</th>
+              <th>Price (৳)</th>
+              <th>Stock</th>
+              <th>Showcase</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in products %}
+            <tr class="product-row" data-category="{{ p.category.lower() }}">
+              <td style="width:64px;">
+                <img src="{{ p.image }}" alt="{{ p.name }}" class="product-thumbnail" onerror="this.src='/static/uploads/default-classic-black-tee.svg'">
+              </td>
+              <td>
+                <div style="font-weight:700;">{{ p.name }}</div>
+                <div style="font-size:12px; color:var(--core-muted);">{{ p.category }}</div>
+              </td>
+              <td>
+                <form method="post" action="/admin/products/{{ p.id }}/update" style="display:flex; gap:6px; align-items:center;">
+                  <input type="hidden" name="name" value="{{ p.name }}">
+                  <input type="hidden" name="category" value="{{ p.category }}">
+                  <input type="hidden" name="stock" value="{{ p.stock }}">
+                  <input type="hidden" name="description" value="{{ p.description }}">
+                  <input type="hidden" name="image_url" value="{{ p.image }}">
+                  <input type="number" step="1" name="price" value="{{ '%.0f'|format(p.price) }}" class="admin-input" style="width:85px; padding:4px 8px; font-size:12px;" required>
+                  <button type="submit" class="btn-ghost" style="padding:4px 8px; font-size:10px;">Update</button>
+                </form>
+              </td>
+              <td>
+                <span class="status-pill {% if p.stock > 15 %}delivered{% elif p.stock > 0 %}pending{% else %}cancelled{% endif %}">
+                  {{ p.stock }} units
+                </span>
+              </td>
+              <td>
+                {% if p.is_featured %}
+                  <span style="font-size:11px; background:#f0efeb; padding:2px 8px; border-radius:3px; font-weight:600;">Featured</span>
+                {% else %}
+                  <span style="font-size:11px; color:var(--core-muted);">Standard</span>
+                {% endif %}
+              </td>
+              <td style="text-align:right;">
+                <div style="display:inline-flex; gap:6px;">
+                  <button class="btn-ghost btn-edit-prod"
+                    data-id="{{ p.id }}"
+                    data-name="{{ p.name }}"
+                    data-category="{{ p.category }}"
+                    data-price="{{ p.price }}"
+                    data-stock="{{ p.stock }}"
+                    data-desc="{{ p.description }}"
+                    data-image="{{ p.image }}"
+                    style="padding:4px 10px; font-size:10px;">
+                    Edit
+                  </button>
+                  <form method="post" action="/admin/products/{{ p.id }}/delete" style="display:inline;">
+                    <button type="submit" class="btn-danger-sm">Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" style="text-align:center; padding:32px; color:var(--core-muted);">No products registered.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 4: CUSTOMERS CRM
+         ========================================== -->
+    <section class="tab-pane" id="tab-customers" style="display:none;">
+      <div class="admin-section-head">
+        <div>
+          <p class="eyebrow accent" style="margin-bottom:4px;">CUSTOMER DIRECTORY</p>
+          <h2>Customers CRM</h2>
+        </div>
+        <span>{{ customers|length }} UNIQUE BUYERS</span>
+      </div>
+
+      <div class="admin-table-wrap">
+        <table class="admin-data-table">
+          <thead>
+            <tr>
+              <th>Customer Name</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>Address</th>
+              <th>Total Orders</th>
+              <th>Lifetime Spend</th>
+              <th>Last Purchase</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in customers %}
+            <tr>
+              <td><strong>{{ c.name }}</strong></td>
+              <td><a href="tel:{{ c.phone }}" style="color:var(--core-accent); text-decoration:none;">{{ c.phone }}</a></td>
+              <td style="color:var(--core-muted);">{{ c.email or 'N/A' }}</td>
+              <td style="font-size:12px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ c.address }}</td>
+              <td><span class="status-pill pending">{{ c.order_count }} orders</span></td>
+              <td><strong style="color:var(--core-ink);">৳{{ '%.0f'|format(c.total_spent) }}</strong></td>
+              <td style="font-size:12px; color:var(--core-muted);">{{ c.last_order or 'Recent' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" style="text-align:center; padding:32px; color:var(--core-muted);">No customer records yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 5: SETTINGS & SECURITY
+         ========================================== -->
+    <section class="tab-pane" id="tab-settings" style="display:none;">
+      <div class="admin-section-head">
+        <div>
+          <p class="eyebrow accent" style="margin-bottom:4px;">CONFIGURATION</p>
+          <h2>Settings & Security</h2>
+        </div>
+        <span>COREMAN SYSTEM</span>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr; max-width:650px; gap:26px;">
+        <!-- Admin Account Security -->
+        <div class="admin-card">
+          <div class="card-title-bar">
+            <h3>Admin Credentials</h3>
+          </div>
+          <p style="font-size:13px; color:var(--core-muted); margin-bottom:18px;">
+            Current logged in administrator: <strong style="color:var(--core-ink);">{{ admin_user }}</strong>
+          </p>
+          <form method="post" action="/admin/settings/password">
+            <div class="form-field">
+              <label class="field-label">Current Password</label>
+              <input type="password" name="current_password" class="field-input" required placeholder="Enter current password">
+            </div>
+            <div class="form-field">
+              <label class="field-label">New Password</label>
+              <input type="password" name="new_password" class="field-input" required placeholder="Enter new strong password">
+            </div>
+            <div class="form-field">
+              <label class="field-label">Confirm New Password</label>
+              <input type="password" name="confirm_password" class="field-input" required placeholder="Confirm new password">
+            </div>
+            <button type="submit" class="btn-dark" style="margin-top:12px;">Update Password</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Storefront Parameters -->
+      <div class="admin-card" style="margin-top:26px;">
+        <div class="card-title-bar">
+          <h3>Storefront Parameters</h3>
+        </div>
+        <form method="post" action="/admin/settings/update">
+          <div class="admin-form-grid">
+            <div class="form-field">
+              <label class="field-label">Store Brand Name</label>
+              <input type="text" name="store_name" value="{{ settings.store_name or 'COREMAN' }}" class="field-input" required>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Currency Symbol</label>
+              <input type="text" name="currency" value="{{ settings.currency or '৳' }}" class="field-input" required>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Delivery Fee (Inside Dhaka)</label>
+              <input type="number" name="delivery_fee_dhaka" value="{{ settings.delivery_fee_dhaka or '60' }}" class="field-input" required>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Delivery Fee (Outside Dhaka)</label>
+              <input type="number" name="delivery_fee_outside" value="{{ settings.delivery_fee_outside or '120' }}" class="field-input" required>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Free Delivery Minimum (৳)</label>
+              <input type="number" name="free_shipping_threshold" value="{{ settings.free_shipping_threshold or '3000' }}" class="field-input" required>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Support Phone</label>
+              <input type="text" name="contact_phone" value="{{ settings.contact_phone or '+880 1700-000000' }}" class="field-input">
+            </div>
+            <div class="form-field full">
+              <label class="field-label">Announcement Banner Text</label>
+              <input type="text" name="announcement" value="{{ settings.announcement or 'Enjoy free shipping inside Dhaka on orders above ৳3000!' }}" class="field-input">
+            </div>
+          </div>
+          <button type="submit" class="btn-dark" style="margin-top:14px;">Save Storefront Parameters</button>
         </form>
       </div>
-      {% endfor %}
-    </div>
-  </section>
+    </section>
+  </main>
 
-  <section class="admin-panel">
-    <h2>Order Management</h2>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Customer</th>
-            <th>Address</th>
-            <th>Total</th>
-            <th>ETA</th>
-            <th>Payment</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for order in orders %}
-          <tr>
-            <td>#{{ order.id }}</td>
-            <td>
-              {{ order.name }}<br>
-              {{ order.email }}<br>
-              {{ order.phone }}
-            </td>
-            <td>{{ order.address }}</td>
-            <td>৳{{ '%.0f'|format(order.total) }}</td>
-            <td>{{ order.estimated_delivery or '3-4 days' }}</td>
-            <td>{{ order.payment_method }}<br>{{ order.payment_status }}</td>
-            <td>
-              <form method="post" action="/admin/orders/{{ order.id }}/update" class="status-form">
-                <select name="status">
-                  <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
-                  <option value="Processing" {% if order.status == 'Processing' %}selected{% endif %}>Processing</option>
-                  <option value="Packed" {% if order.status == 'Packed' %}selected{% endif %}>Packed</option>
-                  <option value="Shipped" {% if order.status == 'Shipped' %}selected{% endif %}>Shipped</option>
-                  <option value="Delivered" {% if order.status == 'Delivered' %}selected{% endif %}>Delivered</option>
-                  <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
-                </select>
-                <select name="payment_status">
-                  <option value="Pending" {% if order.payment_status == 'Pending' %}selected{% endif %}>Pending</option>
-                  <option value="Paid" {% if order.payment_status == 'Paid' %}selected{% endif %}>Paid</option>
-                  <option value="Cancelled" {% if order.payment_status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
-                </select>
-                <button type="submit">Save</button>
-              </form>
-            </td>
-            <td>{{ order.status }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
-</main>
-{% endblock %}
+  <!-- Sticky Footer Matching Frontend -->
+  <footer class="site-footer">
+    <b>COREMAN</b>
+    <p>Modern essentials for everyday confidence.</p>
+    <small>© 2026 COREMAN. All rights reserved.</small>
+  </footer>
 
+  <!-- ==========================================
+       MODAL 1: ADD NEW PRODUCT
+       ========================================== -->
+  <div class="modal-overlay" id="addProductModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Add New Product</h3>
+        <button class="modal-close-btn modal-close">&times;</button>
+      </div>
+      <form method="post" action="/admin/products/add" enctype="multipart/form-data">
+        <div class="modal-body">
+          <div class="admin-form-grid">
+            <div class="form-field full">
+              <label class="field-label">Product Name *</label>
+              <input type="text" name="name" class="field-input" placeholder="e.g. Oxford Cotton Shirt" required>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Category *</label>
+              <input type="text" name="category" class="field-input" placeholder="e.g. Shirts, Jackets, Pants" required>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Price (৳) *</label>
+              <input type="number" step="1" name="price" class="field-input" placeholder="1490" required>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Initial Stock Count</label>
+              <input type="number" step="1" name="stock" value="50" class="field-input" required>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Featured in Showcase?</label>
+              <select name="is_featured" class="field-select">
+                <option value="1">Yes, Featured</option>
+                <option value="0">Standard Item</option>
+              </select>
+            </div>
+            <div class="form-field full">
+              <label class="field-label">Product Description</label>
+              <textarea name="description" class="field-textarea" placeholder="Fabric, fit, details..."></textarea>
+            </div>
+            <div class="form-field full">
+              <label class="field-label">Image File Upload</label>
+              <input type="file" name="image" accept="image/*" class="field-input">
+            </div>
+            <div class="form-field full">
+              <label class="field-label">Or Image URL</label>
+              <input type="url" name="image_url" class="field-input" placeholder="https://images.unsplash.com/...">
+            </div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn-ghost modal-close">Cancel</button>
+          <button type="submit" class="btn-dark">Create Product</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL 2: EDIT PRODUCT
+       ========================================== -->
+  <div class="modal-overlay" id="editProductModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Edit Product</h3>
+        <button class="modal-close-btn modal-close">&times;</button>
+      </div>
+      <form method="post" id="editProductForm" enctype="multipart/form-data">
+        <input type="hidden" name="product_id" id="editProdId">
+        <div class="modal-body">
+          <div class="admin-form-grid">
+            <div class="form-field full">
+              <label class="field-label">Product Name *</label>
+              <input type="text" name="name" id="editProdName" class="field-input" required>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Category *</label>
+              <input type="text" name="category" id="editProdCategory" class="field-input" required>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Price (৳) *</label>
+              <input type="number" step="1" name="price" id="editProdPrice" class="field-input" required>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Stock Quantity</label>
+              <input type="number" step="1" name="stock" id="editProdStock" class="field-input" required>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Featured Item?</label>
+              <select name="is_featured" class="field-select">
+                <option value="1">Yes, Featured</option>
+                <option value="0">Standard</option>
+              </select>
+            </div>
+            <div class="form-field full">
+              <label class="field-label">Product Description</label>
+              <textarea name="description" id="editProdDesc" class="field-textarea"></textarea>
+            </div>
+            <div class="form-field full">
+              <label class="field-label">Replace Image (File Upload)</label>
+              <input type="file" name="image" accept="image/*" class="field-input">
+            </div>
+            <div class="form-field full">
+              <label class="field-label">Or Image URL</label>
+              <input type="url" name="image_url" id="editProdImageUrl" class="field-input">
+            </div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn-ghost modal-close">Cancel</button>
+          <button type="submit" class="btn-dark">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL 3: ORDER DETAILS SLIDE-OUT
+       ========================================== -->
+  <div class="modal-overlay" id="orderDetailsModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Order Information</h3>
+        <button class="modal-close-btn modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="orderDetailsContent">
+        <div style="text-align:center; padding:30px; color:var(--core-muted);">Loading order details...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='admin.js') }}?v=2.5"></script>
+</body>
+</html>

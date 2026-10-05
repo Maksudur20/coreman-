@@ -1,19 +1,21 @@
 {% extends 'base.html' %}
 {% block content %}
 <main class="auth-shell">
-  <div class="auth-panel">
-    <p class="eyebrow accent">ADMIN ACCESS</p>
-    <h1>Admin Login</h1>
+  <div class="auth-panel" style="background:#fff; border:1px solid var(--core-line); border-radius:4px; box-shadow:0 16px 40px rgba(23, 26, 24, 0.06); padding:36px 32px;">
+    <p class="eyebrow accent" style="margin-bottom:6px;">ADMIN ACCESS</p>
+    <h1 style="font-size:26px; font-weight:700; margin:0 0 10px 0; color:var(--core-ink);">Admin Portal</h1>
+    <p style="font-size:12px; color:var(--core-muted); margin-bottom:24px;">Sign in to access store controls and management.</p>
+
     <form method="post" action="/admin/login" class="admin-form single">
-      <label>
+      <label style="font-size:12px; text-transform:uppercase; letter-spacing:0.08em; font-weight:700; color:var(--core-muted);">
         Username
-        <input type="text" name="username" required>
+        <input type="text" name="username" class="field-input" placeholder="admin" required autofocus style="border:1px solid rgba(17,17,17,0.15); padding:12px; width:100%; border-radius:3px; margin-top:6px;">
       </label>
-      <label>
+      <label style="font-size:12px; text-transform:uppercase; letter-spacing:0.08em; font-weight:700; color:var(--core-muted); margin-top:14px;">
         Password
-        <input type="password" name="password" required>
+        <input type="password" name="password" class="field-input" placeholder="••••••••••••" required style="border:1px solid rgba(17,17,17,0.15); padding:12px; width:100%; border-radius:3px; margin-top:6px;">
       </label>
-      <button type="submit" class="btn dark">SIGN IN</button>
+      <button type="submit" class="btn dark" style="width:100%; margin-top:20px;">SIGN IN</button>
     </form>
   </div>
 </main>

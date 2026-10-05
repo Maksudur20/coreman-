@@ -1,1 +1,280 @@
-{% extends 'base.html' %}{% block content %}<main class="page checkout"><h1>Checkout</h1><form method="post"><label>Name<input required name="name"></label><label>Email<input required type="email" name="email"></label><label>Phone<input required name="phone"></label><label>Delivery Address<textarea required name="address"></textarea></label><label>Payment Method<select name="payment_method"><option>Cash on Delivery</option>{% if not cod_only %}<option>bKash</option><option>Card / Online Payment</option>{% endif %}</select></label><h2>Total: ৳{{'%.0f'|format(total)}}</h2><button class="btn dark">PLACE ORDER</button></form></main>{% endblock %}
+{% extends 'base.html' %}
+{% block content %}
+<main class="page checkout-page-wrap">
+  <div class="checkout-heading-area">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 14px;">
+      <div>
+        <div class="checkout-breadcrumbs">
+          <span class="step-crumb completed">✓ 1. Shopping Bag</span>
+          <span class="crumb-separator">→</span>
+          <span class="step-crumb active">2. Shipping & Payment</span>
+          <span class="crumb-separator">→</span>
+          <span class="step-crumb">3. Confirmation</span>
+        </div>
+        <h1 style="margin: 10px 0 0; font-size: clamp(24px, 3vw, 32px); font-weight: 800; letter-spacing: -0.02em;">Finalize Your Order</h1>
+      </div>
+      <a href="/cart" style="font-size: 12px; color: var(--core-muted); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 4px; background: rgba(23, 26, 24, 0.04); transition: background 150ms ease;">
+        ← Return to Shopping Bag
+      </a>
+    </div>
+  </div>
+
+  <form method="post" action="/checkout" id="checkoutForm">
+    <div class="checkout-grid">
+      <!-- Left Column: Shipping & Payment Steps -->
+      <div class="checkout-main-col">
+        <!-- Step 1: Customer Contact -->
+        <div class="checkout-card">
+          <div class="checkout-card-header">
+            <span class="step-num">1</span>
+            <h2 class="checkout-card-title">Customer Information</h2>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <label style="display: flex; flex-direction: column; gap: 6px;">
+              <span class="field-label">Full Name *</span>
+              <input type="text" name="name" class="field-input" placeholder="e.g. Tanvir Ahmed" required>
+            </label>
+
+            <label style="display: flex; flex-direction: column; gap: 6px;">
+              <span class="field-label">Mobile Number *</span>
+              <input type="tel" name="phone" class="field-input" placeholder="01700-000000" required>
+            </label>
+
+            <label style="display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1;">
+              <span class="field-label">Email Address (Optional)</span>
+              <input type="email" name="email" class="field-input" placeholder="you@example.com">
+              <span style="font-size: 11px; color: var(--core-muted);">For order invoice, delivery updates, and tracking confirmation.</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Step 2: Delivery Address & District -->
+        <div class="checkout-card">
+          <div class="checkout-card-header">
+            <span class="step-num">2</span>
+            <h2 class="checkout-card-title">Shipping & Delivery Details</h2>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <label style="display: flex; flex-direction: column; gap: 6px;">
+              <span class="field-label">Delivery District (জেলা) *</span>
+              <select name="district" id="districtSelect" class="field-select" required>
+                <optgroup label="Primary Metro (ঢাকা মেট্রো - ৳{{ store_settings.delivery_fee_dhaka or '60' }})">
+                  <option value="Dhaka" data-zone="dhaka" selected>Dhaka (ঢাকা - Inside Metro)</option>
+                </optgroup>
+                <optgroup label="Dhaka Division (ঢাকার বাইরে - ৳{{ store_settings.delivery_fee_outside or '120' }})">
+                  <option value="Gazipur" data-zone="outside">Gazipur (গাজীপুর)</option>
+                  <option value="Narayanganj" data-zone="outside">Narayanganj (নারায়ণগঞ্জ)</option>
+                  <option value="Tangail" data-zone="outside">Tangail (টাঙ্গাইল)</option>
+                  <option value="Narsingdi" data-zone="outside">Narsingdi (নরসিংদী)</option>
+                  <option value="Manikganj" data-zone="outside">Manikganj (মানিকগঞ্জ)</option>
+                  <option value="Munshiganj" data-zone="outside">Munshiganj (মুন্সীগঞ্জ)</option>
+                  <option value="Kishoreganj" data-zone="outside">Kishoreganj (কিশোরগঞ্জ)</option>
+                  <option value="Faridpur" data-zone="outside">Faridpur (ফরিদপুর)</option>
+                  <option value="Gopalganj" data-zone="outside">Gopalganj (গোপালগঞ্জ)</option>
+                  <option value="Madaripur" data-zone="outside">Madaripur (মাদারীপুর)</option>
+                  <option value="Rajbari" data-zone="outside">Rajbari (রাজবাড়ী)</option>
+                  <option value="Shariatpur" data-zone="outside">Shariatpur (শরীয়তপুর)</option>
+                </optgroup>
+                <optgroup label="Chittagong Division">
+                  <option value="Chittagong" data-zone="outside">Chittagong (চট্টগ্রাম)</option>
+                  <option value="Cox's Bazar" data-zone="outside">Cox's Bazar (কক্সবাজার)</option>
+                  <option value="Cumilla" data-zone="outside">Cumilla (কুমিল্লা)</option>
+                  <option value="Feni" data-zone="outside">Feni (ফেনী)</option>
+                  <option value="Brahmanbaria" data-zone="outside">Brahmanbaria (ব্রাহ্মণবাড়িয়া)</option>
+                  <option value="Chandpur" data-zone="outside">Chandpur (চাঁদপুর)</option>
+                  <option value="Noakhali" data-zone="outside">Noakhali (নোয়াখালী)</option>
+                  <option value="Lakshmipur" data-zone="outside">Lakshmipur (লক্ষ্মীপুর)</option>
+                  <option value="Rangamati" data-zone="outside">Rangamati (রাঙ্গামাটি)</option>
+                  <option value="Bandarban" data-zone="outside">Bandarban (বান্দরবান)</option>
+                  <option value="Khagrachhari" data-zone="outside">Khagrachhari (খাগড়াছড়ি)</option>
+                </optgroup>
+                <optgroup label="Sylhet Division">
+                  <option value="Sylhet" data-zone="outside">Sylhet (সিলেট)</option>
+                  <option value="Moulvibazar" data-zone="outside">Moulvibazar (মৌলভীবাজার)</option>
+                  <option value="Habiganj" data-zone="outside">Habiganj (হবিগঞ্জ)</option>
+                  <option value="Sunamganj" data-zone="outside">Sunamganj (সুনামগঞ্জ)</option>
+                </optgroup>
+                <optgroup label="Rajshahi Division">
+                  <option value="Rajshahi" data-zone="outside">Rajshahi (রাজশাহী)</option>
+                  <option value="Bogura" data-zone="outside">Bogura (বগুড়া)</option>
+                  <option value="Pabna" data-zone="outside">Pabna (পাবনা)</option>
+                  <option value="Sirajganj" data-zone="outside">Sirajganj (সিরাজগঞ্জ)</option>
+                  <option value="Naogaon" data-zone="outside">Naogaon (নওগাঁ)</option>
+                  <option value="Natore" data-zone="outside">Natore (নাটোর)</option>
+                  <option value="Chapainawabganj" data-zone="outside">Chapainawabganj (চাঁপাইনবাবগঞ্জ)</option>
+                  <option value="Joypurhat" data-zone="outside">Joypurhat (জয়পুরহাট)</option>
+                </optgroup>
+                <optgroup label="Khulna Division">
+                  <option value="Khulna" data-zone="outside">Khulna (খুলনা)</option>
+                  <option value="Jashore" data-zone="outside">Jashore (যশোর)</option>
+                  <option value="Kushtia" data-zone="outside">Kushtia (কুষ্টিয়া)</option>
+                  <option value="Jhenaidah" data-zone="outside">Jhenaidah (ঝিনাইদহ)</option>
+                  <option value="Satkhira" data-zone="outside">Satkhira (সাতক্ষীরা)</option>
+                  <option value="Bagerhat" data-zone="outside">Bagerhat (বাগেরহাট)</option>
+                  <option value="Chuadanga" data-zone="outside">Chuadanga (চুয়াডাঙ্গা)</option>
+                  <option value="Meherpur" data-zone="outside">Meherpur (মেহেরপুর)</option>
+                  <option value="Magura" data-zone="outside">Magura (মাগুরা)</option>
+                  <option value="Narail" data-zone="outside">Narail (নড়াইল)</option>
+                </optgroup>
+                <optgroup label="Barisal Division">
+                  <option value="Barisal" data-zone="outside">Barisal (বরিশাল)</option>
+                  <option value="Patuakhali" data-zone="outside">Patuakhali (পটুয়াখালী)</option>
+                  <option value="Bhola" data-zone="outside">Bhola (ভোলা)</option>
+                  <option value="Pirojpur" data-zone="outside">Pirojpur (পিরোজপুর)</option>
+                  <option value="Barguna" data-zone="outside">Barguna (বরগুনা)</option>
+                  <option value="Jhalokathi" data-zone="outside">Jhalokathi (ঝালকাঠি)</option>
+                </optgroup>
+                <optgroup label="Rangpur Division">
+                  <option value="Rangpur" data-zone="outside">Rangpur (রংপুর)</option>
+                  <option value="Dinajpur" data-zone="outside">Dinajpur (দিনাজপুর)</option>
+                  <option value="Kurigram" data-zone="outside">Kurigram (কুড়িগ্রাম)</option>
+                  <option value="Gaibandha" data-zone="outside">Gaibandha (গাইবান্ধা)</option>
+                  <option value="Nilphamari" data-zone="outside">Nilphamari (নীলফামারী)</option>
+                  <option value="Lalmonirhat" data-zone="outside">Lalmonirhat (লালমনিরহাট)</option>
+                  <option value="Thakurgaon" data-zone="outside">Thakurgaon (ঠাকুরগাঁও)</option>
+                  <option value="Panchagarh" data-zone="outside">Panchagarh (পঞ্চগড়)</option>
+                </optgroup>
+                <optgroup label="Mymensingh Division">
+                  <option value="Mymensingh" data-zone="outside">Mymensingh (ময়মনসিংহ)</option>
+                  <option value="Jamalpur" data-zone="outside">Jamalpur (জামালপুর)</option>
+                  <option value="Netrokona" data-zone="outside">Netrokona (নেত্রকোণা)</option>
+                  <option value="Sherpur" data-zone="outside">Sherpur (শেরপুর)</option>
+                </optgroup>
+              </select>
+            </label>
+
+            <label style="display: flex; flex-direction: column; gap: 6px;">
+              <span class="field-label">Delivery Zone Status</span>
+              <div id="deliveryZoneBanner" style="background: #faf9f6; border: 1.5px solid rgba(23,26,24,0.14); border-radius: 6px; padding: 11px 14px; font-size: 13px; color: var(--core-ink); display: flex; align-items: center; gap: 8px; height: 46px; box-sizing: border-box;">
+                <span id="zoneIcon">⚡</span>
+                <span id="zoneText">Inside Dhaka (৳{{ store_settings.delivery_fee_dhaka or '60' }})</span>
+              </div>
+            </label>
+          </div>
+
+          <label style="display: flex; flex-direction: column; gap: 6px;">
+            <span class="field-label">Full Street Address (রাস্তা / বাসা নম্বর / এলাকা) *</span>
+            <textarea name="address" class="field-textarea" placeholder="Flat/House number, Road/Block, Area, Thana (e.g. Flat 4B, House 12, Road 5, Dhanmondi)" required></textarea>
+          </label>
+
+          <div style="margin-top: 14px; background: #faf9f6; padding: 12px 14px; border: 1px solid var(--core-line); border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 18px;" id="etaIcon">🚚</span>
+            <div style="font-size: 12px; color: var(--core-ink); line-height: 1.4;" id="deliveryEtaText">
+              <strong>Delivery ETA:</strong> 2-3 Days within Dhaka Metro
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Payment Method Selection -->
+        <div class="checkout-card">
+          <div class="checkout-card-header">
+            <span class="step-num">3</span>
+            <h2 class="checkout-card-title">Select Payment Method</h2>
+          </div>
+
+          <div class="payment-methods-grid">
+            <!-- Option 1: Cash on Delivery -->
+            <label class="payment-card-label selected">
+              <input type="radio" name="payment_method" value="Cash on Delivery" class="payment-radio" checked>
+              <div class="payment-card-info">
+                <div class="payment-card-name">
+                  <span>💵 Cash on Delivery (COD)</span>
+                  <span class="payment-badge">Recommended</span>
+                </div>
+                <div class="payment-card-desc">Inspect your parcel at doorstep and pay cash upon delivery. Zero advance payment needed.</div>
+              </div>
+            </label>
+
+            {% if not cod_only %}
+            <!-- Option 2: bKash -->
+            <label class="payment-card-label">
+              <input type="radio" name="payment_method" value="bKash" class="payment-radio">
+              <div class="payment-card-info">
+                <div class="payment-card-name">
+                  <span>📱 bKash Payment</span>
+                </div>
+                <div class="payment-card-desc">Instant online checkout through verified bKash wallet.</div>
+              </div>
+            </label>
+
+            <!-- Option 3: Card / Online -->
+            <label class="payment-card-label">
+              <input type="radio" name="payment_method" value="Card / Online Payment" class="payment-radio">
+              <div class="payment-card-info">
+                <div class="payment-card-name">
+                  <span>💳 Debit / Credit Card / Internet Banking</span>
+                </div>
+                <div class="payment-card-desc">Pay securely using Visa, Mastercard, AMEX or online banking.</div>
+              </div>
+            </label>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Sticky Order Summary -->
+      <div class="checkout-sidebar-col">
+        <div class="order-summary-box">
+          <h2 style="font-size: 15px; font-weight: 700; margin: 0 0 16px 0; padding-bottom: 12px; border-bottom: 1px solid var(--core-line); color: var(--core-ink);">
+            Order Summary ({{ items|length }} item{% if items|length != 1 %}s{% endif %})
+          </h2>
+
+          <div class="summary-items-list">
+            {% for item in items %}
+            <div class="summary-item-row">
+              <img src="{{ item.image }}" alt="{{ item.name }}" class="summary-item-img" onerror="this.src='/static/uploads/default-classic-black-tee.svg'">
+              <div class="summary-item-text">
+                <h3 class="summary-item-name">{{ item.name }}</h3>
+                <div class="summary-item-meta">Qty: {{ item.qty }} × ৳{{ '%.0f'|format(item.price) }}</div>
+              </div>
+              <div class="summary-item-price">৳{{ '%.0f'|format(item.subtotal) }}</div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div style="border-top: 1px solid var(--core-line); padding-top: 14px;">
+            <div class="price-line-item">
+              <span>Items Subtotal</span>
+              <strong style="color: var(--core-ink);" id="checkoutSubtotal" data-subtotal="{{ total }}">৳{{ '%.0f'|format(total) }}</strong>
+            </div>
+
+            <div class="price-line-item">
+              <span id="deliveryFeeLabel">Delivery Fee (Inside Dhaka)</span>
+              {% set threshold = (store_settings.free_shipping_threshold|int) if store_settings and store_settings.free_shipping_threshold else 3000 %}
+              {% set dhaka_fee = (store_settings.delivery_fee_dhaka|int) if store_settings and store_settings.delivery_fee_dhaka else 60 %}
+              {% if total >= threshold %}
+                <strong id="deliveryFeeDisplay" style="color: #15803d; font-weight: 700;">FREE (Unlocked)</strong>
+              {% else %}
+                <strong id="deliveryFeeDisplay" style="color: var(--core-ink);">৳{{ dhaka_fee }}</strong>
+              {% endif %}
+            </div>
+
+            <div class="price-line-item grand-total">
+              <span>Total Amount</span>
+              <span id="grandTotalDisplay" style="font-weight: 800; color: var(--core-ink);">৳{{ '%.0f'|format(initial_grand_total) }}</span>
+            </div>
+          </div>
+
+          <!-- Hidden inputs for backend confirmation -->
+          <input type="hidden" name="delivery_fee" id="deliveryFeeInput" value="{{ initial_fee }}">
+          <input type="hidden" name="final_total" id="finalTotalInput" value="{{ initial_grand_total }}">
+
+          <button type="submit" class="btn dark" style="width: 100%; margin-top: 22px; padding: 15px 20px; font-size: 12px; letter-spacing: 0.12em;">
+            CONFIRM & PLACE ORDER →
+          </button>
+        </div>
+      </div>
+    </div>
+  </form>
+</main>
+
+<script>
+  window.COREMAN_SETTINGS = {
+    feeDhaka: {{ (store_settings.delivery_fee_dhaka|int) if store_settings and store_settings.delivery_fee_dhaka else 60 }},
+    feeOutside: {{ (store_settings.delivery_fee_outside|int) if store_settings and store_settings.delivery_fee_outside else 120 }},
+    freeThreshold: {{ (store_settings.free_shipping_threshold|int) if store_settings and store_settings.free_shipping_threshold else 3000 }}
+  };
+</script>
+{% endblock %}
