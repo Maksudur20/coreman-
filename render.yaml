@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: coreman-store
+    runtime: python
+    region: singapore
+    plan: 0.5c-512mb
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    healthCheckPath: /
+    disk:
+      name: coreman-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: COREMAN_ADMIN_USERNAME
+        sync: false
+      - key: COREMAN_ADMIN_PASSWORD
+        sync: false
+      - key: COREMAN_DATA_DIR
+        value: /var/data
+      - key: COREMAN_COD_ONLY
+        value: "true"

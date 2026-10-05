@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
+  <rect width="900" height="1200" fill="#f1ecdf"/>
+  <rect x="140" y="120" width="620" height="960" rx="30" fill="#faf5ec" stroke="#d8c9a7" stroke-width="8"/>
+  <path d="M280 210 L360 180 L540 180 L620 210 L670 330 L610 375 L570 305 L330 305 L290 375 L230 330 Z" fill="#d5b879"/>
+  <path d="M310 330 H590 L650 1010 H250 Z" fill="#f7f0de"/>
+  <path d="M355 330 H545 V840 H355 Z" fill="#d7b471" opacity="0.5"/>
+  <text x="450" y="1080" font-size="54" text-anchor="middle" fill="#1a1a1a" font-family="Arial, sans-serif" font-weight="700">Essential Polo</text>
+</svg>

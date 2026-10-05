@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<main class="success">
+  <div class="success-card">
+    <p class="eyebrow accent">ORDER CONFIRMED</p>
+    <h1>Thank you for shopping COREMAN.</h1>
+    <p>Order #{{ order_id }} · Total ৳{{ '%.0f'|format(total) }} · {{ method }}</p>
+    <p><strong>Delivery ETA:</strong> {{ estimated_delivery }}</p>
+    <p><strong>Address:</strong> {{ address }}</p>
+    <p><strong>Email:</strong> {{ email }}</p>
+    <p class="note">A confirmation email has been prepared for your order.</p>
+    <a class="btn dark" href="/">CONTINUE SHOPPING</a>
+  </div>
+</main>
+{% endblock %}

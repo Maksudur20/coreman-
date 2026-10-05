@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+coreman.db
+coreman.db-shm
+coreman.db-wal
+__pycache__/
+.pytest_cache/
+venv/
+.venv/
+static/uploads/*
+!static/uploads/default-*
