@@ -1,10 +1,19 @@
-import sys
 import os
+import sys
 
-# Set up current directory in sys.path
-PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-if PROJECT_DIR not in sys.path:
-    sys.path.insert(0, PROJECT_DIR)
+# Switch to virtualenv Python if not running under it
+interp = '/home/coremanfashion/virtualenv/coreman/3.11/bin/python'
+if os.path.exists(interp) and sys.executable != interp:
+    os.execl(interp, interp, *sys.argv)
 
-# Import the Flask app as 'application' (WSGI standard required by cPanel Passenger)
-from app import app as application
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from app import app as application
+except Exception:
+    import traceback
+    err = traceback.format_exc()
+
+    def application(environ, start_response):
+        start_response('500 Internal Server Error', [('Content-Type', 'text/html; charset=utf-8')])
+        return [f"<h1>Startup Error</h1><pre>{err}</pre>".encode('utf-8')]
