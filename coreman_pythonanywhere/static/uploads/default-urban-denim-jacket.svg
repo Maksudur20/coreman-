@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
+  <rect width="900" height="1200" fill="#dfeaf4"/>
+  <rect x="150" y="120" width="600" height="960" rx="30" fill="#31628d" stroke="#1f496d" stroke-width="8"/>
+  <path d="M300 220 L360 180 L540 180 L600 220 L660 320 L620 360 L570 300 L330 300 L280 360 L240 320 Z" fill="#274c72"/>
+  <path d="M310 330 H590 L640 560 L575 1020 H325 L260 560 Z" fill="#4178a7"/>
+  <path d="M395 330 H505 V850 H395 Z" fill="#dfeaf4" opacity="0.35"/>
+  <text x="450" y="1085" font-size="50" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-weight="700">Urban Denim Jacket</text>
+</svg>

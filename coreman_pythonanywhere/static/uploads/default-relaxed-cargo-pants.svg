@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
+  <rect width="900" height="1200" fill="#efe5d8"/>
+  <rect x="180" y="130" width="540" height="960" rx="36" fill="#c7945f" stroke="#8d6035" stroke-width="8"/>
+  <path d="M280 230 H620 L700 1010 H510 L472 790 H428 L390 790 H210 L280 230 Z" fill="#d7a66d"/>
+  <path d="M330 210 L400 160 H500 L570 210 L610 350 H290 Z" fill="#8f5d36"/>
+  <rect x="360" y="350" width="180" height="420" fill="#b57a46"/>
+  <text x="450" y="1085" font-size="46" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-weight="700">Relaxed Cargo Pants</text>
+</svg>

@@ -1,0 +1,265 @@
+:root {
+  --core-ink: #171a18;
+  --core-muted: #747773;
+  --core-accent: #a1632d;
+  --core-paper: #f0efeb;
+  --core-line: rgba(23, 26, 24, 0.12);
+}
+
+.topbar {
+  min-height: 84px;
+  padding-inline: max(5%, calc((100% - 1320px) / 2));
+  border-bottom-color: var(--core-line);
+  box-shadow: 0 5px 22px rgba(23, 26, 24, 0.035);
+}
+
+.logo {
+  font-size: 23px;
+  letter-spacing: 0.16em;
+}
+
+.topbar nav a:not(:has(.cart-pill)) {
+  position: relative;
+  padding-block: 10px;
+}
+
+.topbar nav a:not(:has(.cart-pill))::after {
+  position: absolute;
+  right: 0;
+  bottom: 3px;
+  left: 0;
+  height: 1px;
+  background: var(--core-accent);
+  content: "";
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 180ms ease;
+}
+
+.topbar nav a:hover::after,
+.topbar nav a:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.cart-pill {
+  background: var(--core-ink);
+}
+
+.shop {
+  max-width: 1320px;
+}
+
+.sectionhead {
+  margin-bottom: 34px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--core-line);
+}
+
+.sectionhead h2,
+.cats h2 {
+  margin-block: 0;
+  font-size: clamp(25px, 3vw, 34px);
+  font-weight: 650;
+}
+
+.sectionhead span {
+  color: var(--core-muted);
+  font-size: 11px;
+}
+
+.grid {
+  gap: 30px 22px;
+}
+
+.card {
+  overflow: hidden;
+  padding: 0 0 16px;
+  border: 1px solid rgba(23, 26, 24, 0.07);
+  border-radius: 3px;
+  background: #fff;
+  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(23, 26, 24, 0.16);
+  box-shadow: 0 14px 30px rgba(23, 26, 24, 0.09);
+}
+
+.card > a:first-child {
+  display: block;
+  overflow: hidden;
+  background: var(--core-paper);
+}
+
+.card img {
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  transition: transform 400ms ease;
+}
+
+.card:hover img {
+  transform: scale(1.025);
+}
+
+.card .meta,
+.card form {
+  margin-inline: 16px;
+}
+
+.card .meta {
+  min-height: 58px;
+  align-items: flex-start;
+  margin-top: 17px;
+}
+
+.card .meta h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.card .meta p {
+  color: var(--core-muted);
+  font-size: 12px;
+}
+
+.card .meta b {
+  padding-top: 1px;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.card .btn.dark {
+  min-height: 44px;
+  margin-top: 10px;
+  border-color: var(--core-ink);
+  background: var(--core-ink);
+  font-size: 11px;
+  letter-spacing: 0.11em;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.card .btn.dark:hover {
+  background: #fff;
+  color: var(--core-ink);
+  box-shadow: none;
+  transform: none;
+}
+
+.site-footer {
+  position: relative;
+  margin-top: 24px;
+  padding: 48px 5% 30px;
+  background: #202521;
+  color: #f7f6f2;
+}
+
+.site-footer::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 46px;
+  height: 2px;
+  background: var(--core-accent);
+  content: "";
+  transform: translateX(-50%);
+}
+
+.site-footer b {
+  font-size: 20px;
+  letter-spacing: 0.18em;
+}
+
+.site-footer p {
+  margin: 10px 0 20px;
+  color: rgba(247, 246, 242, 0.72);
+  font-size: 14px;
+}
+
+.site-footer small {
+  color: rgba(247, 246, 242, 0.5);
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    gap: 12px;
+    padding: 12px 5%;
+  }
+
+  .logo {
+    font-size: 21px;
+  }
+
+  .topbar nav {
+    gap: 10px 16px;
+  }
+
+  .shop {
+    padding-top: 48px;
+    padding-bottom: 52px;
+  }
+
+  .sectionhead {
+    align-items: flex-end;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .sectionhead span {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 12px;
+  }
+
+  .card .meta,
+  .card form {
+    margin-inline: 10px;
+  }
+
+  .card {
+    padding-bottom: 11px;
+  }
+
+  .card .meta {
+    min-height: 66px;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .card .meta h3 {
+    font-size: 13px;
+  }
+
+  .card .meta p {
+    font-size: 11px;
+  }
+
+  .card .meta b {
+    font-size: 12px;
+  }
+
+  .card .btn.dark {
+    min-height: 40px;
+    padding: 10px 6px;
+    font-size: 9px;
+  }
+
+  .site-footer {
+    padding-top: 38px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
