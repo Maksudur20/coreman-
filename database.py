@@ -175,6 +175,10 @@ def get_db():
         data_dir = os.getenv('COREMAN_DATA_DIR') or os.path.dirname(__file__)
         db_path = os.path.join(data_dir, 'coreman.db')
         raw_conn = sqlite3.connect(db_path)
+        raw_conn.create_function("GREATEST", -1, max)
+        raw_conn.create_function("greatest", -1, max)
+        raw_conn.create_function("LEAST", -1, min)
+        raw_conn.create_function("least", -1, min)
         raw_conn.row_factory = sqlite3.Row
         return DBWrapper(raw_conn, is_pg=False)
 
@@ -455,9 +459,9 @@ def init_db():
                     except Exception:
                         pass
 
-            cur.execute("SELECT value FROM store_settings WHERE key = 'db_initialized'")
-            sqlite_inited = cur.fetchone()
-            if not sqlite_inited and cur.execute('SELECT COUNT(*) FROM products').fetchone()[0] == 0:
+            cur.execute('SELECT COUNT(*) FROM products')
+            prod_cnt = cur.fetchone()[0]
+            if prod_cnt == 0:
                 for prod in DEFAULT_PRODUCTS:
                     cur.execute(
                         'INSERT INTO products (name, category, price, stock, description, image, is_featured) VALUES (?,?,?,?,?,?,?)',

@@ -200,7 +200,14 @@
           <p class="eyebrow accent" style="margin-bottom:4px;">ORDERS DIRECTORY</p>
           <h2>Manage Customer Orders</h2>
         </div>
-        <span>{{ orders|length }} TOTAL ORDERS</span>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span>{{ orders|length }} TOTAL ORDERS</span>
+          {% if orders %}
+          <form method="post" action="/admin/orders/clear-all" onsubmit="return confirm('WARNING: Are you sure you want to delete ALL {{ orders|length }} orders? This action cannot be undone.');" style="margin:0;">
+            <button type="submit" class="btn-ghost" style="padding:4px 10px; font-size:11px; color:#dc2626; border-color:#fca5a5;">🗑 Delete All Orders</button>
+          </form>
+          {% endif %}
+        </div>
       </div>
 
       <div class="filter-row">
@@ -282,6 +289,9 @@
                 <div style="display:inline-flex; gap:6px;">
                   <button class="btn-ghost btn-view-order" data-id="{{ order.id }}" style="padding:4px 10px; font-size:10px;">Details</button>
                   <a href="/admin/orders/{{ order.id }}/invoice" target="_blank" class="btn-ghost" style="padding:4px 10px; font-size:10px;">Invoice</a>
+                  <form method="post" action="/admin/orders/{{ order.id }}/delete" onsubmit="return confirm('Delete Order #{{ order.id }}?');" style="margin:0; display:inline;">
+                    <button type="submit" class="btn-ghost" style="padding:4px 8px; font-size:10px; color:#dc2626; border-color:#fca5a5;" title="Delete Order">Delete</button>
+                  </form>
                 </div>
               </td>
             </tr>

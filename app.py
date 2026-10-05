@@ -265,13 +265,21 @@ def send_order_email(email, order_id, total, method, delivery_eta, address):
         f'Thank you for shopping with COREMAN.'
     )
 
-    smtp_host = os.getenv('SMTP_HOST')
-    if not smtp_host:
-        print(f'\n--- ORDER EMAIL (simulated) ---\n{subject}\n{body}\n')
+    smtp_host = os.getenv('SMTP_HOST', '').strip()
+    smtp_user = os.getenv('SMTP_USER', '').strip()
+    # If unconfigured or using placeholder values, simulate email
+    if (
+        not smtp_host
+        or smtp_host.lower() in {'smtp.example.com', 'example.com', 'localhost', '127.0.0.1'}
+        or smtp_user.lower() in {'your-smtp-user', 'user', ''}
+    ):
+        try:
+            print(f'\n--- ORDER EMAIL (simulated) ---\n{subject}\n{body}\n')
+        except Exception:
+            print(f'\n--- ORDER EMAIL (simulated) #{order_id} to {email} ---\n')
         return True
 
     smtp_port = int(os.getenv('SMTP_PORT', '587'))
-    smtp_user = os.getenv('SMTP_USER')
     smtp_password = os.getenv('SMTP_PASSWORD')
     sender_email = os.getenv('EMAIL_FROM', 'no-reply@coreman.com')
 
@@ -282,7 +290,7 @@ def send_order_email(email, order_id, total, method, delivery_eta, address):
     message.set_content(body)
 
     try:
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=5) as server:
             server.ehlo()
             if smtp_user and smtp_password:
                 server.starttls()
@@ -564,11 +572,17 @@ def place_order():
                    VALUES (?, ?, ?, ?, ?)''',
                 (order_id, item['id'], item['name'], item['qty'], item['price'])
             )
-            # Decrement stock count
-            db_inst.execute(
-                '''UPDATE products SET stock = GREATEST(0, stock - ?) WHERE id = ?''',
-                (item['qty'], item['id'])
-            )
+            # Decrement stock count safely for both PostgreSQL and SQLite
+            if db_inst.is_pg:
+                db_inst.execute(
+                    '''UPDATE products SET stock = GREATEST(0, stock - ?) WHERE id = ?''',
+                    (item['qty'], item['id'])
+                )
+            else:
+                db_inst.execute(
+                    '''UPDATE products SET stock = MAX(0, stock - ?) WHERE id = ?''',
+                    (item['qty'], item['id'])
+                )
         db_inst.commit()
         invalidate_products_cache()
     except Exception as e:
@@ -585,7 +599,10 @@ def place_order():
         live_payment_url = stripe_checkout_session(order_id, grand_total, email, name, phone, full_shipping_destination)
 
     if email:
-        send_order_email(email, order_id, grand_total, method, delivery_eta, full_shipping_destination)
+        try:
+            send_order_email(email, order_id, grand_total, method, delivery_eta, full_shipping_destination)
+        except Exception as exc:
+            print(f"Order confirmation email warning: {exc}")
 
     if live_payment_url:
         return redirect(live_payment_url)
@@ -808,6 +825,15 @@ def delete_order(order_id):
     execute_write('DELETE FROM order_items WHERE order_id = ?', (order_id,))
     execute_write('DELETE FROM orders WHERE id = ?', (order_id,))
     flash(f'Order #{order_id} was deleted successfully.', 'success')
+    return redirect(url_for('admin_dashboard') + '?tab=orders')
+
+
+@app.post('/admin/orders/clear-all')
+@admin_required
+def clear_all_orders():
+    execute_write('DELETE FROM order_items')
+    execute_write('DELETE FROM orders')
+    flash('All orders have been deleted successfully.', 'success')
     return redirect(url_for('admin_dashboard') + '?tab=orders')
 
 
