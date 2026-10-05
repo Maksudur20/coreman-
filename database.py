@@ -372,7 +372,7 @@ def init_db():
                 ('delivery_fee_dhaka', '60'),
                 ('delivery_fee_outside', '120'),
                 ('free_shipping_threshold', '3000'),
-                ('contact_phone', '+880 1700-000000'),
+                ('contact_phone', '+8801410141584'),
                 ('contact_email', 'support@coreman.com'),
                 ('announcement', 'Enjoy free shipping inside Dhaka on orders above ৳3000!')
             ]
@@ -480,7 +480,7 @@ def init_db():
                 ('delivery_fee_dhaka', '60'),
                 ('delivery_fee_outside', '120'),
                 ('free_shipping_threshold', '3000'),
-                ('contact_phone', '+880 1700-000000'),
+                ('contact_phone', '+8801410141584'),
                 ('contact_email', 'support@coreman.com'),
                 ('announcement', 'Enjoy free shipping inside Dhaka on orders above ৳3000!'),
                 ('db_initialized', 'true')
