@@ -339,13 +339,16 @@ def init_db():
                         db_conn.rollback()
 
                 if not migrated:
-                    for prod in DEFAULT_PRODUCTS:
-                        cur.execute(
-                            '''INSERT INTO products (name, category, price, stock, description, image, is_featured)
-                               VALUES (%s, %s, %s, %s, %s, %s, %s)''',
-                            (prod[1], prod[2], prod[3], prod[4], prod[5], prod[6], prod[7])
-                        )
-                    db_conn.commit()
+                    cur.execute("SELECT value FROM store_settings WHERE key = 'db_initialized'")
+                    already_inited = cur.fetchone()
+                    if not already_inited:
+                        for prod in DEFAULT_PRODUCTS:
+                            cur.execute(
+                                '''INSERT INTO products (name, category, price, stock, description, image, is_featured)
+                                   VALUES (%s, %s, %s, %s, %s, %s, %s)''',
+                                (prod[1], prod[2], prod[3], prod[4], prod[5], prod[6], prod[7])
+                            )
+                        db_conn.commit()
 
             # Ensure admin user exists
             admin_user = os.getenv('COREMAN_ADMIN_USERNAME', 'admin')
@@ -427,22 +430,34 @@ def init_db():
             )''')
 
             columns = [r[1] for r in cur.execute('PRAGMA table_info(products)').fetchall()]
-            if 'stock' not in columns:
-                cur.execute('ALTER TABLE products ADD COLUMN stock INTEGER DEFAULT 50')
-            if 'description' not in columns:
-                cur.execute("ALTER TABLE products ADD COLUMN description TEXT DEFAULT ''")
-            if 'is_featured' not in columns:
-                cur.execute('ALTER TABLE products ADD COLUMN is_featured INTEGER DEFAULT 1')
-            if 'created_at' not in columns:
-                cur.execute("ALTER TABLE products ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            for col_name, col_def in [
+                ('stock', 'INTEGER DEFAULT 50'),
+                ('description', "TEXT DEFAULT ''"),
+                ('is_featured', 'INTEGER DEFAULT 1'),
+                ('created_at', 'TIMESTAMP DEFAULT NULL'),
+            ]:
+                if col_name not in columns:
+                    try:
+                        cur.execute(f"ALTER TABLE products ADD COLUMN {col_name} {col_def}")
+                    except Exception:
+                        pass
 
             columns_ord = [r[1] for r in cur.execute('PRAGMA table_info(orders)').fetchall()]
-            if 'status' not in columns_ord:
-                cur.execute("ALTER TABLE orders ADD COLUMN status TEXT DEFAULT 'Pending'")
-            if 'estimated_delivery' not in columns_ord:
-                cur.execute("ALTER TABLE orders ADD COLUMN estimated_delivery TEXT DEFAULT '3-4 days'")
+            for col_name, col_def in [
+                ('status', "TEXT DEFAULT 'Pending'"),
+                ('estimated_delivery', "TEXT DEFAULT '3-4 days'"),
+                ('district', "TEXT DEFAULT 'Dhaka'"),
+                ('delivery_fee', 'REAL DEFAULT 0'),
+            ]:
+                if col_name not in columns_ord:
+                    try:
+                        cur.execute(f"ALTER TABLE orders ADD COLUMN {col_name} {col_def}")
+                    except Exception:
+                        pass
 
-            if cur.execute('SELECT COUNT(*) FROM products').fetchone()[0] == 0:
+            cur.execute("SELECT value FROM store_settings WHERE key = 'db_initialized'")
+            sqlite_inited = cur.fetchone()
+            if not sqlite_inited and cur.execute('SELECT COUNT(*) FROM products').fetchone()[0] == 0:
                 for prod in DEFAULT_PRODUCTS:
                     cur.execute(
                         'INSERT INTO products (name, category, price, stock, description, image, is_featured) VALUES (?,?,?,?,?,?,?)',
@@ -455,6 +470,23 @@ def init_db():
             if not admin_row.fetchone():
                 hashed = generate_password_hash(admin_pass, method='scrypt')
                 cur.execute('INSERT INTO admin_users (username, password_hash, role) VALUES (?,?,?)', (admin_user, hashed, 'admin'))
+            else:
+                hashed = generate_password_hash(admin_pass, method='scrypt')
+                cur.execute('UPDATE admin_users SET password_hash=? WHERE username=?', (hashed, admin_user))
+
+            default_settings = [
+                ('store_name', 'COREMAN'),
+                ('currency', '৳'),
+                ('delivery_fee_dhaka', '60'),
+                ('delivery_fee_outside', '120'),
+                ('free_shipping_threshold', '3000'),
+                ('contact_phone', '+880 1700-000000'),
+                ('contact_email', 'support@coreman.com'),
+                ('announcement', 'Enjoy free shipping inside Dhaka on orders above ৳3000!'),
+                ('db_initialized', 'true')
+            ]
+            for k, v in default_settings:
+                cur.execute('INSERT OR IGNORE INTO store_settings (key, value) VALUES (?, ?)', (k, v))
 
             db_conn.commit()
 

@@ -51,7 +51,13 @@
         {% endif %}
       </form>
     </article>
-    {% endfor %}
+    {% if not products %}
+      <div style="grid-column: 1 / -1; text-align: center; padding: 70px 20px; background: #fff; border: 1px solid var(--core-line); border-radius: 8px;">
+        <div style="font-size: 36px; margin-bottom: 12px;">🛍️</div>
+        <h3 style="font-size: 20px; font-weight: 700; margin: 0 0 8px; color: var(--core-ink);">Store Inventory Updating</h3>
+        <p style="color: var(--core-muted); font-size: 13px; margin: 0;">Our new collection is currently being prepared. Check back shortly!</p>
+      </div>
+    {% endif %}
   </div>
   <div id="noProductsAlert" style="display:none; text-align:center; padding:50px 20px; background:#fff; border:1px solid var(--core-line); border-radius:8px; margin-top:20px;">
     <div style="font-size:32px; margin-bottom:10px;">🔍</div>
