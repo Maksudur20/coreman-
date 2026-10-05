@@ -17,14 +17,15 @@ load_dotenv()
 
 app = Flask(__name__)
 IS_RENDER = os.getenv('RENDER', '').lower() == 'true'
+IS_PRODUCTION = IS_RENDER or os.getenv('COREMAN_PRODUCTION', '').lower() == 'true'
 COD_ONLY = os.getenv('COREMAN_COD_ONLY', '').lower() == 'true'
 secret_key = os.getenv('SECRET_KEY')
-if IS_RENDER and not secret_key:
+if IS_PRODUCTION and not secret_key:
     raise RuntimeError('SECRET_KEY must be configured for production.')
 app.secret_key = secret_key or 'coreman-secret-key-2026'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = IS_RENDER
+app.config['SESSION_COOKIE_SECURE'] = IS_PRODUCTION
 DATA_DIR = os.getenv('COREMAN_DATA_DIR') or os.path.dirname(__file__)
 DB = os.path.join(DATA_DIR, 'coreman.db')
 UPLOAD_FOLDER = os.path.join(DATA_DIR, 'uploads') if os.getenv('COREMAN_DATA_DIR') else os.path.join(os.path.dirname(__file__), 'static', 'uploads')
@@ -41,7 +42,7 @@ PRODUCTS = [
 
 APP_ADMIN_USER = os.getenv('COREMAN_ADMIN_USERNAME', 'admin')
 APP_ADMIN_PASSWORD = os.getenv('COREMAN_ADMIN_PASSWORD', 'Coreman@2026!')
-if IS_RENDER and (APP_ADMIN_USER == 'admin' or APP_ADMIN_PASSWORD == 'Coreman@2026!'):
+if IS_PRODUCTION and (APP_ADMIN_USER == 'admin' or APP_ADMIN_PASSWORD == 'Coreman@2026!'):
     raise RuntimeError('Set unique COREMAN_ADMIN_USERNAME and COREMAN_ADMIN_PASSWORD values for production.')
 app.config['ADMIN_USER'] = APP_ADMIN_USER
 app.config['ADMIN_PASS_HASH'] = generate_password_hash(APP_ADMIN_PASSWORD)

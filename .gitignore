@@ -8,5 +8,6 @@ __pycache__/
 .pytest_cache/
 venv/
 .venv/
+*.zip
 static/uploads/*
 !static/uploads/default-*
