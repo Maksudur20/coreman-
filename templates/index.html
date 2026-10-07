@@ -1,13 +1,86 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="hero">
-  <div>
-    <p class="eyebrow">NEW SEASON · 2026</p>
-    <h1>BUILT FOR<br><span>YOUR CORE.</span></h1>
-    <p>Clean silhouettes. Everyday essentials. Designed for modern men.</p>
-    <a class="btn" href="#shop">SHOP COLLECTION</a>
+<!-- Dynamic Hero Slider Section -->
+<section class="hero-slider-wrap" id="heroSlider" data-autoplay="{{ store_settings.hero_autoplay_speed or '5000' }}" aria-label="Featured Hero Slider">
+  <div class="hero-slides-track" id="heroTrack">
+    {% for s in hero_slides if s.active is not defined or s.active %}
+    <div class="hero-slide" data-slide-index="{{ loop.index0 }}" style="background-image: linear-gradient(90deg, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.48) 55%, rgba(0,0,0,0.2) 100%), url('{{ s.image }}');">
+      <div class="hero-slide-content">
+        {% if s.eyebrow %}
+        <p class="eyebrow hero-eyebrow">{{ s.eyebrow }}</p>
+        {% endif %}
+        {% if s.title %}
+        <h1 class="hero-headline">{{ s.title|replace('\n', '<br>')|safe }}</h1>
+        {% endif %}
+        {% if s.subtitle %}
+        <p class="hero-subtitle">{{ s.subtitle }}</p>
+        {% endif %}
+        {% if s.btn_text %}
+        <a class="btn hero-cta-btn" href="{{ s.btn_link or '#shop' }}">{{ s.btn_text }}</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
   </div>
+
+  {% set active_slides = [] %}
+  {% for s in hero_slides if s.active is not defined or s.active %}
+    {% set _ = active_slides.append(s) %}
+  {% endfor %}
+
+  {% if active_slides|length > 1 %}
+  <button type="button" class="hero-nav-arrow hero-prev" id="heroPrevBtn" aria-label="Previous Slide">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+  </button>
+  <button type="button" class="hero-nav-arrow hero-next" id="heroNextBtn" aria-label="Next Slide">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+  </button>
+
+  <div class="hero-slider-dots" id="heroDots">
+    {% for s in active_slides %}
+    <button type="button" class="hero-dot {% if loop.first %}active{% endif %}" data-index="{{ loop.index0 }}" aria-label="Slide {{ loop.index }}"></button>
+    {% endfor %}
+  </div>
+  {% endif %}
 </section>
+
+<script>
+(function() {
+  function runAutoHero() {
+    var slider = document.getElementById('heroSlider');
+    if (!slider) return;
+    var track = document.getElementById('heroTrack');
+    var slides = slider.querySelectorAll('.hero-slide');
+    if (!slides || slides.length <= 1) return;
+    var dots = slider.querySelectorAll('.hero-dot');
+    var idx = 0;
+    var speed = parseInt(slider.getAttribute('data-autoplay') || '3500', 10) || 3500;
+
+    function go(toIdx) {
+      if (toIdx < 0) toIdx = slides.length - 1;
+      if (toIdx >= slides.length) toIdx = 0;
+      idx = toIdx;
+      if (track) {
+        track.style.transition = 'transform 0.7s cubic-bezier(0.25, 1, 0.5, 1)';
+        track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+      }
+      dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
+      slides.forEach(function(s, i) { s.classList.toggle('active', i === idx); });
+    }
+
+    if (!window._heroSliderTimer) {
+      window._heroSliderTimer = setInterval(function() {
+        go(idx + 1);
+      }, speed);
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runAutoHero);
+  } else {
+    runAutoHero();
+  }
+})();
+</script>
 
 <section class="cats">
   <h2>Shop by Category</h2>

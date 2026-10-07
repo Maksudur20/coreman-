@@ -203,6 +203,50 @@ def get_district_rates(store_settings=None):
     return rates
 
 
+def get_hero_slides(store_settings=None):
+    if store_settings is None:
+        store_settings = get_cached_settings()
+    raw = store_settings.get('hero_slides')
+    if raw:
+        try:
+            slides = json.loads(raw)
+            if isinstance(slides, list) and slides:
+                return slides
+        except Exception:
+            pass
+    return [
+        {
+            'id': 'slide-1',
+            'image': 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1800',
+            'eyebrow': 'NEW SEASON · 2026',
+            'title': 'BUILT FOR YOUR CORE.',
+            'subtitle': 'Clean silhouettes. Everyday essentials. Designed for modern men.',
+            'btn_text': 'SHOP COLLECTION',
+            'btn_link': '#shop',
+            'active': True,
+        },
+        {
+            'id': 'slide-2',
+            'image': '/static/uploads/coreman_denim_cover_new_arrival_HD.png',
+            'eyebrow': 'NEW ARRIVAL · 2026',
+            'title': 'PREMIUM DENIM COLLECTION.',
+            'subtitle': 'Crafted comfort, durable cuts, and effortless modern confidence.',
+            'btn_text': 'SHOP COLLECTION',
+            'btn_link': '#shop',
+            'active': True,
+        }
+    ]
+
+
+def save_hero_slides(slides):
+    execute_write(
+        '''INSERT INTO store_settings (key, value) VALUES (?, ?)
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value''',
+        ('hero_slides', json.dumps(slides)),
+    )
+    invalidate_settings_cache()
+
+
 @app.context_processor
 def inject_globals():
     cart = session.get('cart', {}) or {}
@@ -212,6 +256,7 @@ def inject_globals():
     return {
         'cart_count': item_count,
         'store_settings': settings,
+        'hero_slides': get_hero_slides(settings),
         'bangladesh_districts': BANGLADESH_DISTRICTS,
         'district_rates': d_rates,
         'district_rates_json': json.dumps(d_rates),
@@ -1085,6 +1130,151 @@ def update_district_rates():
     invalidate_settings_cache()
     flash('District delivery charges updated successfully.', 'success')
     return redirect(url_for('admin_dashboard') + '?tab=settings')
+
+
+# ==========================================
+# ADMIN HERO SLIDER ACTIONS
+# ==========================================
+
+@app.post('/admin/hero/add')
+@admin_required
+def admin_hero_add():
+    slides = get_hero_slides()
+    uploaded_files = request.files.getlist('slide_images')
+    image_url = request.form.get('image_url', '').strip()
+    eyebrow = request.form.get('eyebrow', 'NEW SEASON · 2026').strip()
+    title = request.form.get('title', 'BUILT FOR YOUR CORE.').strip()
+    subtitle = request.form.get('subtitle', 'Clean silhouettes. Everyday essentials. Designed for modern men.').strip()
+    btn_text = request.form.get('btn_text', 'SHOP COLLECTION').strip()
+    btn_link = request.form.get('btn_link', '#shop').strip()
+
+    added_count = 0
+
+    # Process all uploaded image files (supports multiple selection!)
+    for f in uploaded_files:
+        if f and getattr(f, 'filename', None):
+            saved_path = save_uploaded_image(f)
+            if saved_path:
+                slide_id = f"slide-{uuid.uuid4().hex[:8]}"
+                slides.append({
+                    'id': slide_id,
+                    'image': saved_path,
+                    'eyebrow': eyebrow,
+                    'title': title,
+                    'subtitle': subtitle,
+                    'btn_text': btn_text,
+                    'btn_link': btn_link,
+                    'active': True,
+                })
+                added_count += 1
+
+    # Also handle single image URL if provided and no file was uploaded
+    if image_url and added_count == 0:
+        slide_id = f"slide-{uuid.uuid4().hex[:8]}"
+        slides.append({
+            'id': slide_id,
+            'image': image_url,
+            'eyebrow': eyebrow,
+            'title': title,
+            'subtitle': subtitle,
+            'btn_text': btn_text,
+            'btn_link': btn_link,
+            'active': True,
+        })
+        added_count += 1
+
+    if added_count > 0:
+        save_hero_slides(slides)
+        flash(f'Successfully added {added_count} slide(s) to the hero slider.', 'success')
+    else:
+        flash('No valid image was uploaded or provided.', 'error')
+
+    return redirect(url_for('admin_dashboard') + '?tab=hero')
+
+
+@app.post('/admin/hero/<slide_id>/update')
+@admin_required
+def admin_hero_update(slide_id):
+    slides = get_hero_slides()
+    slide = next((s for s in slides if str(s.get('id')) == str(slide_id)), None)
+    if not slide:
+        flash('Slide not found.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=hero')
+
+    uploaded_file = request.files.get('slide_image')
+    image_url = request.form.get('image_url', '').strip()
+    if uploaded_file and getattr(uploaded_file, 'filename', None):
+        saved = save_uploaded_image(uploaded_file)
+        if saved:
+            slide['image'] = saved
+    elif image_url:
+        slide['image'] = image_url
+
+    slide['eyebrow'] = request.form.get('eyebrow', slide.get('eyebrow', '')).strip()
+    slide['title'] = request.form.get('title', slide.get('title', '')).strip()
+    slide['subtitle'] = request.form.get('subtitle', slide.get('subtitle', '')).strip()
+    slide['btn_text'] = request.form.get('btn_text', slide.get('btn_text', '')).strip()
+    slide['btn_link'] = request.form.get('btn_link', slide.get('btn_link', '#shop')).strip()
+
+    save_hero_slides(slides)
+    flash(f'Slide "{slide.get("title")}" updated successfully.', 'success')
+    return redirect(url_for('admin_dashboard') + '?tab=hero')
+
+
+@app.post('/admin/hero/<slide_id>/delete')
+@admin_required
+def admin_hero_delete(slide_id):
+    slides = get_hero_slides()
+    new_slides = [s for s in slides if str(s.get('id')) != str(slide_id)]
+    if len(new_slides) < len(slides):
+        save_hero_slides(new_slides)
+        flash('Slide removed successfully.', 'success')
+    else:
+        flash('Slide not found.', 'error')
+    return redirect(url_for('admin_dashboard') + '?tab=hero')
+
+
+@app.post('/admin/hero/<slide_id>/toggle')
+@admin_required
+def admin_hero_toggle(slide_id):
+    slides = get_hero_slides()
+    slide = next((s for s in slides if str(s.get('id')) == str(slide_id)), None)
+    if slide:
+        slide['active'] = not slide.get('active', True)
+        save_hero_slides(slides)
+        status_text = 'activated' if slide['active'] else 'hidden'
+        flash(f'Slide {status_text} successfully.', 'success')
+    return redirect(url_for('admin_dashboard') + '?tab=hero')
+
+
+@app.post('/admin/hero/<slide_id>/move')
+@admin_required
+def admin_hero_move(slide_id):
+    slides = get_hero_slides()
+    idx = next((i for i, s in enumerate(slides) if str(s.get('id')) == str(slide_id)), -1)
+    direction = request.form.get('direction', 'up')
+    if idx != -1:
+        if direction == 'up' and idx > 0:
+            slides[idx], slides[idx - 1] = slides[idx - 1], slides[idx]
+            save_hero_slides(slides)
+        elif direction == 'down' and idx < len(slides) - 1:
+            slides[idx], slides[idx + 1] = slides[idx + 1], slides[idx]
+            save_hero_slides(slides)
+    return redirect(url_for('admin_dashboard') + '?tab=hero')
+
+
+@app.post('/admin/hero/settings')
+@admin_required
+def admin_hero_settings():
+    speed = request.form.get('hero_autoplay_speed', '5000').strip()
+    execute_write(
+        '''INSERT INTO store_settings (key, value) VALUES (?, ?)
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value''',
+        ('hero_autoplay_speed', speed),
+    )
+    invalidate_settings_cache()
+    flash('Hero slider autoplay settings saved.', 'success')
+    return redirect(url_for('admin_dashboard') + '?tab=hero')
 
 
 # ==========================================

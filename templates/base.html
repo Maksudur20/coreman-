@@ -8,8 +8,8 @@
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="canonical" href="https://www.coremanfashion.com/">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.7">
-    <link rel="stylesheet" href="{{ url_for('static', filename='polish.css') }}?v=2.7">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=3.5">
+    <link rel="stylesheet" href="{{ url_for('static', filename='polish.css') }}?v=3.5">
     <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
     <link rel="dns-prefetch" href="https://images.unsplash.com">
   </head>
@@ -22,8 +22,8 @@
 
     <header class="topbar">
       <a class="logo" href="/">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="COREMAN Logo" class="site-logo-img">
-        <span>{{ store_settings.store_name if store_settings and store_settings.store_name else 'COREMAN' }}</span>
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="COREMAN Icon" class="site-logo-icon">
+        <img src="{{ url_for('static', filename='coreman_wordmark.png') }}" alt="{{ store_settings.store_name if store_settings and store_settings.store_name else 'COREMAN' }}" class="site-logo-wordmark">
       </a>
       <nav>
         <a href="/">Home</a>
@@ -45,9 +45,9 @@
     {% block content %}{% endblock %}
 
     <footer class="site-footer">
-      <a href="/" class="footer-brand" style="display:inline-flex; align-items:center; justify-content:center; gap:10px; margin-bottom:12px; text-decoration:none;">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="COREMAN Logo" style="width:34px; height:34px; object-fit:contain; border-radius:4px; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));">
-        <b style="font-size:20px; letter-spacing:0.12em; color:#fff;">{{ store_settings.store_name if store_settings and store_settings.store_name else 'COREMAN' }}</b>
+      <a href="/" class="footer-brand" style="display:inline-flex; align-items:center; justify-content:center; gap:12px; margin-bottom:14px; text-decoration:none;">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="COREMAN Icon" class="footer-logo-icon" style="width:38px; height:38px; object-fit:contain; background:#ffffff; border-radius:6px; padding:3px; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+        <img src="{{ url_for('static', filename='coreman_wordmark_light.png') }}" alt="COREMAN" class="footer-logo-wordmark" style="height:26px; width:auto; object-fit:contain;" onerror="this.src='{{ url_for('static', filename='coreman_wordmark.png') }}'">
       </a>
       <p>Modern essentials for everyday confidence.</p>
       {% if store_settings and (store_settings.contact_phone or store_settings.contact_email) %}
@@ -60,6 +60,6 @@
       <p style="margin: 8px 0 0; font-size: 12px; color: rgba(247, 246, 242, 0.65); letter-spacing: 0.05em; font-weight: 500;">Made by Sium and Pulok</p>
     </footer>
 
-    <script src="{{ url_for('static', filename='store.js') }}?v=2.6"></script>
+    <script src="{{ url_for('static', filename='store.js') }}?v=3.5"></script>
   </body>
 </html>
