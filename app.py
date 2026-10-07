@@ -383,6 +383,17 @@ def admin_required(view):
 # STOREFRONT ROUTES
 # ==========================================
 
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.png', mimetype='image/png')
+
+
+@app.route('/k-2-2')
+@app.route('/k-2-2/')
+def redirect_k_2_2():
+    return redirect('/', code=301)
+
+
 @app.route('/')
 def home():
     selected_category = request.args.get('category', '').strip()

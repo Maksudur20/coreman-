@@ -58,8 +58,27 @@ main, .page, .shop, .success, .auth-shell, .admin-shell, .product {
 }
 
 .logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-size: 23px;
   letter-spacing: 0.16em;
+  text-decoration: none;
+  font-weight: 900;
+  color: var(--core-ink);
+}
+
+.site-logo-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  display: block;
+  border-radius: 4px;
+  transition: transform 0.2s ease;
+}
+
+.logo:hover .site-logo-img {
+  transform: scale(1.06);
 }
 
 .topbar nav a:not(:has(.cart-pill)) {

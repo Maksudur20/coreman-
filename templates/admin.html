@@ -4,16 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>COREMAN Admin Suite</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.6">
-  <link rel="stylesheet" href="{{ url_for('static', filename='polish.css') }}?v=2.6">
-  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}?v=2.6">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.7">
+  <link rel="stylesheet" href="{{ url_for('static', filename='polish.css') }}?v=2.7">
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}?v=2.7">
 </head>
 <body class="admin-body">
 
   <!-- Top Admin Bar styled identically to Frontend Topbar -->
   <header class="admin-header-bar">
     <div class="admin-brand-group">
-      <a class="admin-logo" href="/admin">COREMAN</a>
+      <a class="admin-logo" href="/admin" style="display:inline-flex; align-items:center; gap:10px;">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="COREMAN Logo" style="width:30px; height:30px; object-fit:contain; border-radius:4px;">
+        <span>COREMAN</span>
+      </a>
       <span class="admin-tag">ADMIN</span>
       <div class="db-status-pill">
         <span class="dot"></span>

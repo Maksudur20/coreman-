@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <title>Invoice #{{ order.id }} - COREMAN</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.png') }}">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
@@ -252,9 +254,12 @@
 
   <div class="invoice-card">
     <div class="invoice-header">
-      <div>
-        <div class="brand-title">COREMAN</div>
-        <div class="brand-subtitle">Modern Essentials Storefront</div>
+      <div style="display:flex; align-items:center; gap:14px;">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="COREMAN Logo" style="width:52px; height:52px; object-fit:contain; border-radius:6px;">
+        <div>
+          <div class="brand-title">COREMAN</div>
+          <div class="brand-subtitle">Modern Essentials Storefront</div>
+        </div>
       </div>
       <div class="invoice-meta">
         <div class="invoice-tag">Customer Invoice</div>
