@@ -623,10 +623,12 @@ def place_order():
         db_inst.commit()
 
         for item in items:
+            p_row = get_cached_product_by_id(item['id'])
+            p_img = (p_row.get('image') if p_row else '') or item.get('image') or ''
             db_inst.execute(
-                '''INSERT INTO order_items (order_id, product_id, name, qty, price)
-                   VALUES (?, ?, ?, ?, ?)''',
-                (order_id, item['id'], item['name'], item['qty'], item['price'])
+                '''INSERT INTO order_items (order_id, product_id, name, qty, price, image)
+                   VALUES (?, ?, ?, ?, ?, ?)''',
+                (order_id, item['id'], item['name'], item['qty'], item['price'], p_img)
             )
             # Decrement stock count safely for both PostgreSQL and SQLite
             if db_inst.is_pg:
@@ -740,6 +742,24 @@ def admin_logout():
 def admin_dashboard():
     # Fetch orders
     orders_raw = query_all('SELECT * FROM orders ORDER BY id DESC')
+    order_items_raw = query_all('''
+        SELECT oi.*, 
+               COALESCE(NULLIF(oi.image, ''), p.image, '/static/uploads/default-classic-black-tee.svg') as image,
+               COALESCE(p.category, 'Apparel') as category,
+               COALESCE(p.stock, 0) as stock,
+               COALESCE(p.description, '') as description
+        FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.id
+        ORDER BY oi.id ASC
+    ''')
+    items_by_order = {}
+    for it in order_items_raw:
+        it_dict = dict(it)
+        it_dict['price'] = float(it_dict['price'])
+        if not it_dict.get('image'):
+            it_dict['image'] = '/static/uploads/default-classic-black-tee.svg'
+        items_by_order.setdefault(it_dict['order_id'], []).append(it_dict)
+
     orders = []
     total_revenue = 0.0
     pending_orders = 0
@@ -755,6 +775,8 @@ def admin_dashboard():
         else:
             o_dict['created_date'] = str(raw_dt or '')[:10]
             o_dict['created_at'] = str(raw_dt or '')
+        o_dict['items'] = items_by_order.get(o_dict['id'], [])
+        o_dict['order_items'] = o_dict['items']
         orders.append(o_dict)
 
         st = o_dict.get('status') or 'Pending'
@@ -838,6 +860,72 @@ def admin_dashboard():
 # ADMIN ORDER ACTIONS
 # ==========================================
 
+@app.get('/admin/api/orders-feed')
+@admin_required
+def admin_orders_feed():
+    orders_raw = query_all('SELECT * FROM orders ORDER BY id DESC')
+    order_items_raw = query_all('''
+        SELECT oi.*, 
+               COALESCE(NULLIF(oi.image, ''), p.image, '/static/uploads/default-classic-black-tee.svg') as image,
+               COALESCE(p.category, 'Apparel') as category,
+               COALESCE(p.stock, 0) as stock,
+               COALESCE(p.description, '') as description
+        FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.id
+        ORDER BY oi.id ASC
+    ''')
+    items_by_order = {}
+    for it in order_items_raw:
+        it_dict = dict(it)
+        it_dict['price'] = float(it_dict['price'])
+        if not it_dict.get('image'):
+            it_dict['image'] = '/static/uploads/default-classic-black-tee.svg'
+        items_by_order.setdefault(it_dict['order_id'], []).append(it_dict)
+
+    orders = []
+    total_revenue = 0.0
+    pending_orders = 0
+    status_counts = {'Pending': 0, 'Processing': 0, 'Packed': 0, 'Shipped': 0, 'Delivered': 0, 'Cancelled': 0}
+
+    for o in orders_raw:
+        o_dict = dict(o)
+        o_dict['total'] = float(o_dict['total'])
+        raw_dt = o_dict.get('created_at')
+        if hasattr(raw_dt, 'strftime'):
+            o_dict['created_date'] = raw_dt.strftime('%d %b %Y')
+            o_dict['created_at'] = raw_dt.strftime('%Y-%m-%d %H:%M')
+        else:
+            o_dict['created_date'] = str(raw_dt or '')[:10]
+            o_dict['created_at'] = str(raw_dt or '')
+        o_dict['items'] = items_by_order.get(o_dict['id'], [])
+        o_dict['order_items'] = o_dict['items']
+        orders.append(o_dict)
+
+        st = o_dict.get('status') or 'Pending'
+        status_counts[st] = status_counts.get(st, 0) + 1
+        if st == 'Pending':
+            pending_orders += 1
+        if st != 'Cancelled':
+            total_revenue += o_dict['total']
+
+    latest_id = orders[0]['id'] if orders else 0
+    total_orders = len(orders)
+    aov = (total_revenue / total_orders) if total_orders > 0 else 0.0
+
+    return jsonify({
+        'latest_id': latest_id,
+        'total_orders': total_orders,
+        'orders': orders,
+        'stats': {
+            'total_revenue': total_revenue,
+            'total_orders': total_orders,
+            'pending_orders': pending_orders,
+            'aov': aov,
+            'status_breakdown': status_counts,
+        }
+    })
+
+
 @app.get('/admin/orders/<int:order_id>/json')
 @admin_required
 def admin_order_json(order_id):
@@ -848,11 +936,23 @@ def admin_order_json(order_id):
     order_dict['total'] = float(order_dict['total'])
     order_dict['created_at'] = str(order_dict.get('created_at') or '')
 
-    items_raw = query_all('SELECT * FROM order_items WHERE order_id = ?', (order_id,))
+    items_raw = query_all('''
+        SELECT oi.*, 
+               COALESCE(NULLIF(oi.image, ''), p.image, '/static/uploads/default-classic-black-tee.svg') as image,
+               COALESCE(p.category, 'Apparel') as category,
+               COALESCE(p.stock, 0) as stock,
+               COALESCE(p.description, '') as description
+        FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = ?
+        ORDER BY oi.id ASC
+    ''', (order_id,))
     items = []
     for it in items_raw:
         it_dict = dict(it)
         it_dict['price'] = float(it_dict['price'])
+        if not it_dict.get('image'):
+            it_dict['image'] = '/static/uploads/default-classic-black-tee.svg'
         items.append(it_dict)
 
     return jsonify({'order': order_dict, 'items': items})

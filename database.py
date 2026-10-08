@@ -256,7 +256,8 @@ def init_db():
                 product_id INTEGER,
                 name VARCHAR(255),
                 qty INTEGER DEFAULT 1,
-                price NUMERIC(10,2)
+                price NUMERIC(10,2),
+                image TEXT DEFAULT ''
             );
             ''')
             cur.execute('''
@@ -279,10 +280,11 @@ def init_db():
             cur.execute('CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);')
             cur.execute('CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);')
             cur.execute('CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);')
-            # Safe schema migrations for district & delivery_fee
+            # Safe schema migrations for district, delivery_fee and order_items.image
             try:
                 cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS district VARCHAR(100) DEFAULT 'Dhaka';")
                 cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_fee NUMERIC(10,2) DEFAULT 0;")
+                cur.execute("ALTER TABLE order_items ADD COLUMN IF NOT EXISTS image TEXT DEFAULT '';")
                 db_conn.commit()
             except Exception as se:
                 print(f"Schema migration notice: {se}")
@@ -419,7 +421,8 @@ def init_db():
                 product_id INTEGER,
                 name TEXT,
                 qty INTEGER,
-                price REAL
+                price REAL,
+                image TEXT DEFAULT ''
             )''')
             cur.execute('''CREATE TABLE IF NOT EXISTS admin_users(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -456,6 +459,16 @@ def init_db():
                 if col_name not in columns_ord:
                     try:
                         cur.execute(f"ALTER TABLE orders ADD COLUMN {col_name} {col_def}")
+                    except Exception:
+                        pass
+
+            columns_oi = [r[1] for r in cur.execute('PRAGMA table_info(order_items)').fetchall()]
+            for col_name, col_def in [
+                ('image', "TEXT DEFAULT ''"),
+            ]:
+                if col_name not in columns_oi:
+                    try:
+                        cur.execute(f"ALTER TABLE order_items ADD COLUMN {col_name} {col_def}")
                     except Exception:
                         pass
 

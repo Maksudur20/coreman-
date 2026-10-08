@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCheckoutPaymentCards();
   initCategoryFilters();
   initCheckoutDistrictSync();
+  initStoreFlashAutoDismiss();
 });
 
 // Toast Manager
@@ -582,3 +583,55 @@ function initHeroSlider() {
   updateSlider(0, false);
   startAutoplay();
 }
+
+// Flash Message Auto-Dismiss (5 Seconds)
+function initStoreFlashAutoDismiss() {
+  const flashMessages = document.querySelectorAll('.flash, .flash-wrap > div');
+  flashMessages.forEach((msg) => {
+    if (msg.dataset.dismissScheduled) return;
+    msg.dataset.dismissScheduled = 'true';
+
+    // Add close button if not present
+    if (!msg.querySelector('.flash-close-btn')) {
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.innerHTML = '&times;';
+      closeBtn.className = 'flash-close-btn';
+      closeBtn.title = 'Dismiss';
+      closeBtn.style.cssText = 'background:none; border:none; font-size:18px; line-height:1; cursor:pointer; color:inherit; opacity:0.6; padding:0 0 0 12px; margin-left:auto;';
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        dismissStoreFlash(msg);
+      };
+      msg.appendChild(closeBtn);
+    }
+
+    setTimeout(() => {
+      dismissStoreFlash(msg);
+    }, 5000);
+  });
+}
+
+function dismissStoreFlash(el) {
+  if (!el || el.dataset.dismissing) return;
+  el.dataset.dismissing = 'true';
+  el.style.transition = 'opacity 0.4s ease, transform 0.4s ease, max-height 0.4s ease, margin 0.4s ease, padding 0.4s ease';
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(-8px)';
+  setTimeout(() => {
+    el.style.maxHeight = '0';
+    el.style.marginTop = '0';
+    el.style.marginBottom = '0';
+    el.style.paddingTop = '0';
+    el.style.paddingBottom = '0';
+    el.style.overflow = 'hidden';
+    setTimeout(() => {
+      const parent = el.parentElement;
+      el.remove();
+      if (parent && parent.children.length === 0 && parent.classList.contains('flash-wrap')) {
+        parent.remove();
+      }
+    }, 400);
+  }, 400);
+}
+

@@ -213,10 +213,10 @@ body.admin-body {
 /* Main Container */
 .admin-main-wrap {
   flex: 1 0 auto;
-  max-width: 1320px;
+  max-width: 1560px;
   width: 100%;
   margin: 0 auto;
-  padding: 40px 5% 70px;
+  padding: 30px 2.5% 60px;
 }
 
 /* Section Heading matching Frontend .sectionhead */
@@ -423,31 +423,38 @@ body.admin-body {
   overflow-x: auto;
   border: 1px solid var(--core-line);
   background: #fff;
-  border-radius: 3px;
+  border-radius: 4px;
+  scrollbar-width: thin;
+}
+
+@media (min-width: 1100px) {
+  .admin-table-wrap {
+    overflow-x: visible;
+  }
 }
 
 .admin-data-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 850px;
+  min-width: 0;
   text-align: left;
 }
 
 .admin-data-table th {
   background: #faf9f6;
-  padding: 14px 16px;
+  padding: 11px 8px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   color: var(--core-muted);
   border-bottom: 1px solid var(--core-line);
   white-space: nowrap;
 }
 
 .admin-data-table td {
-  padding: 16px;
-  font-size: 13px;
+  padding: 10px 8px;
+  font-size: 12px;
   border-bottom: 1px solid var(--core-line);
   vertical-align: middle;
   color: var(--core-ink);
@@ -459,6 +466,32 @@ body.admin-body {
 
 .admin-data-table tr:hover td {
   background: #fdfcf9;
+}
+
+/* Product thumbnail in orders */
+.order-prod-thumb {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.order-prod-thumb:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+
+.prod-view-trigger {
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.prod-view-trigger:hover {
+  opacity: 0.8;
+}
+
+/* High priority modal for Product Quick View */
+.modal-overlay.high-priority {
+  z-index: 1200 !important;
 }
 
 /* Status Badges */
