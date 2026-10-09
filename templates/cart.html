@@ -8,24 +8,28 @@
     </div>
 
     {% if items %}
-      {% set threshold = (store_settings.free_shipping_threshold|int) if store_settings and store_settings.free_shipping_threshold else 3000 %}
-      {% set remaining = threshold - total %}
-      {% set progress_pct = (total / threshold * 100)|int if threshold > 0 else 100 %}
-      {% if progress_pct > 100 %}{% set progress_pct = 100 %}{% endif %}
+      {% set combo_min = (store_settings.combo_min_items|int) if store_settings and store_settings.combo_min_items else 2 %}
+      {% set current_qty = total_qty|default(items|sum(attribute='qty')) %}
+      {% set is_unlocked = current_qty >= combo_min %}
+      {% set remaining_qty = combo_min - current_qty %}
+      {% set progress_pct = 100 if is_unlocked else (current_qty / combo_min * 100)|int %}
 
       <!-- Free Shipping Dynamic Progress Bar -->
-      <div class="shipping-meter-card">
-        <div class="shipping-meter-header">
-          {% if remaining <= 0 %}
+      <div class="shipping-meter-card {% if is_unlocked %}unlocked{% endif %}" id="shippingMeterCard" data-combo-min="{{ combo_min }}" data-fee-dhaka="{{ store_settings.delivery_fee_dhaka or '80' }}" data-fee-outside="{{ store_settings.delivery_fee_outside or '130' }}">
+        <div class="shipping-meter-header" id="shippingMeterHeader">
+          {% if is_unlocked %}
             <span class="meter-icon">🎉</span>
-            <span class="meter-text"><strong>Congratulations!</strong> You have unlocked <strong>FREE Delivery</strong> inside Dhaka.</span>
+            <span class="meter-text"><strong>অভিনন্দন! কম্বো অফার আনলকড (Combo Offer Unlocked)</strong> — আপনি {{ current_qty }}টি প্রোডাক্ট অর্ডার করছেন, তাই সারা বাংলাদেশে <strong>FREE Delivery (৳০)</strong>!</span>
           {% else %}
-            <span class="meter-icon">🚚</span>
-            <span class="meter-text">Add <strong>৳{{ '%.0f'|format(remaining) }}</strong> more to unlock <strong>FREE Delivery</strong> inside Dhaka!</span>
+            <span class="meter-icon">🎁</span>
+            <span class="meter-text">
+              আর মাত্র <strong>{{ remaining_qty }}টি প্রোডাক্ট</strong> ব্যাগে যোগ করলেই পাচ্ছেন <strong>কম্বো অফার: সারা দেশে ১০০% ফ্রি ডেলিভারি!</strong>
+              <span style="display:block; font-size:11.5px; color:var(--core-muted); margin-top:3px;">(১টি প্রোডাক্ট নিলে ডেলিভারি চার্জ: ঢাকার ভেতরে ৳{{ store_settings.delivery_fee_dhaka or '80' }} · ঢাকার বাইরে ৳{{ store_settings.delivery_fee_outside or '130' }})</span>
+            </span>
           {% endif %}
         </div>
         <div class="shipping-meter-track">
-          <div class="shipping-meter-bar" style="width: {{ progress_pct }}%;"></div>
+          <div class="shipping-meter-bar" style="width: {{ progress_pct }}%; {% if is_unlocked %}background: #16a34a;{% endif %}"></div>
         </div>
       </div>
 

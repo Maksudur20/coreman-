@@ -568,16 +568,23 @@
               <input type="text" name="currency" value="{{ settings.currency or '৳' }}" class="field-input" required>
             </div>
             <div class="form-field">
-              <label class="field-label">Default Inside Dhaka Fee (৳)</label>
-              <input type="number" name="delivery_fee_dhaka" value="{{ settings.delivery_fee_dhaka or '60' }}" class="field-input" required>
+              <label class="field-label">Inside Dhaka Delivery Fee (৳)</label>
+              <input type="number" name="delivery_fee_dhaka" value="{{ settings.delivery_fee_dhaka or '80' }}" class="field-input" required>
             </div>
             <div class="form-field">
-              <label class="field-label">Default Outside Dhaka Fee (৳)</label>
-              <input type="number" name="delivery_fee_outside" value="{{ settings.delivery_fee_outside or '120' }}" class="field-input" required>
+              <label class="field-label">Outside Dhaka Delivery Fee (৳)</label>
+              <input type="number" name="delivery_fee_outside" value="{{ settings.delivery_fee_outside or '130' }}" class="field-input" required>
             </div>
             <div class="form-field">
-              <label class="field-label">Free Delivery Minimum (৳)</label>
-              <input type="number" name="free_shipping_threshold" value="{{ settings.free_shipping_threshold or '3000' }}" class="field-input" required>
+              <label class="field-label">Combo Offer Free Delivery (কম্বো ফ্রি ডেলিভারি)</label>
+              <select name="combo_free_delivery" class="field-select">
+                <option value="true" {% if (settings.combo_free_delivery or 'true') == 'true' %}selected{% endif %}>Enabled (সক্রিয় — ফ্রি ডেলিভারি প্রযোজ্য)</option>
+                <option value="false" {% if settings.combo_free_delivery == 'false' %}selected{% endif %}>Disabled (নিষ্ক্রিয়)</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Min Products for Free Delivery Combo (কম্বো আইটেম সংখ্যা)</label>
+              <input type="number" name="combo_min_items" value="{{ settings.combo_min_items or '2' }}" class="field-input" min="2" max="10" required>
             </div>
             <div class="form-field">
               <label class="field-label">Support Phone</label>
@@ -585,75 +592,48 @@
             </div>
             <div class="form-field full">
               <label class="field-label">Announcement Banner Text</label>
-              <input type="text" name="announcement" value="{{ settings.announcement or 'Enjoy free shipping inside Dhaka on orders above ৳3000!' }}" class="field-input">
+              <input type="text" name="announcement" value="{{ settings.announcement or '🔥 COMBO OFFER: যেকোনো ২টি বা ততোধিক প্রোডাক্ট অর্ডারে সারা দেশে ডেলিভারি সম্পূর্ণ ফ্রি! (ঢাকার ভেতরে ৳৮০ | ঢাকার বাইরে ৳১৩০)' }}" class="field-input">
+            </div>
+            <div class="form-field full" style="border-top:1px solid var(--admin-border); padding-top:20px; margin-top:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                <label class="field-label" style="display:flex; align-items:center; gap:8px; margin:0; font-size:14px; font-weight:700;">
+                  <span>🎯 Advanced Tracking & Meta Pixel Suite (অ্যাডভান্সড ট্র্যাকিং)</span>
+                  <span class="badge" style="background:#e0e7ff; color:#3730a3; font-size:11px; font-weight:600;">Server-Side & CAPI Ready</span>
+                </label>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                  <span style="background:#dcfce7; color:#166534; font-size:11px; font-weight:600; padding:2px 8px; border-radius:12px;">✓ 1-Yr Cookie Keeper</span>
+                  <span style="background:#dcfce7; color:#166534; font-size:11px; font-weight:600; padding:2px 8px; border-radius:12px;">✓ Click ID Restorer</span>
+                  <span style="background:#dcfce7; color:#166534; font-size:11px; font-weight:600; padding:2px 8px; border-radius:12px;">✓ EMQ Enricher</span>
+                  <span style="background:#dcfce7; color:#166534; font-size:11px; font-weight:600; padding:2px 8px; border-radius:12px;">✓ Bot Filter</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label class="field-label">Meta / Facebook Pixel ID</label>
+              <input type="text" name="meta_pixel_id" value="{{ settings.meta_pixel_id or '' }}" class="field-input" placeholder="e.g. 123456789012345" style="letter-spacing:0.04em;">
+              <small style="color:var(--admin-muted); font-size:11px;">ফেসবুক ইভেন্টস ম্যানেজার থেকে পাওয়া ১৫-১৬ ডিজিটের Pixel ID।</small>
+            </div>
+
+            <div class="form-field">
+              <label class="field-label">Google Tag Manager (GTM / sGTM) Container ID</label>
+              <input type="text" name="gtm_container_id" value="{{ settings.gtm_container_id or '' }}" class="field-input" placeholder="e.g. GTM-XXXXXXX" style="letter-spacing:0.04em;">
+              <small style="color:var(--admin-muted); font-size:11px;">ঐচ্ছিক: যদি GTM বা Server-Side GTM ব্যবহার করতে চান।</small>
+            </div>
+
+            <div class="form-field full">
+              <label class="field-label">Meta Conversions API (CAPI) Access Token</label>
+              <input type="password" name="meta_capi_token" value="{{ settings.meta_capi_token or '' }}" class="field-input" placeholder="EAAB..." autocomplete="new-password">
+              <small style="color:var(--admin-muted); font-size:11px;">ঐচ্ছিক (Server-Side Tracking): Events Manager -> Settings -> Generate Access Token। এটি দিলে অ্যাড-ব্লকার বাইপাস করে সরাসরি পাইথন সার্ভার থেকে ফেসবুকে ১০০% সেল ডাটা পৌঁছে যাবে।</small>
+            </div>
+
+            <div class="form-field">
+              <label class="field-label">Meta Test Event Code (ঐচ্ছিক টেস্ট কোড)</label>
+              <input type="text" name="meta_test_code" value="{{ settings.meta_test_code or '' }}" class="field-input" placeholder="e.g. TEST12345">
+              <small style="color:var(--admin-muted); font-size:11px;">টেস্ট করার সময় Events Manager-এর "Test Events" ট্যাবের কোড এখানে দিয়ে লাইভ চেক করতে পারেন।</small>
             </div>
           </div>
           <button type="submit" class="btn-dark" style="margin-top:14px;">Save Storefront Parameters</button>
-        </form>
-      </div>
-
-      <!-- District-wise Delivery Charge Management -->
-      <div class="admin-card" style="margin-top:26px;" id="districtDeliveryCard">
-        <div class="card-title-bar" style="flex-wrap:wrap; gap:12px;">
-          <div>
-            <h3>District Delivery Charges (জেলা অনুযায়ী ডেলিভারি চার্জ)</h3>
-            <p style="font-size:12px; color:var(--core-muted); margin:4px 0 0 0;">
-              Set custom delivery fee for each of the 64 districts in Bangladesh. Changes sync live with checkout UI.
-            </p>
-          </div>
-          <div style="display:flex; gap:10px; align-items:center;">
-            <input type="text" id="adminDistrictSearch" placeholder="🔍 Search district / জেলা..." class="field-input" style="width:220px; padding:8px 12px; font-size:12px;">
-          </div>
-        </div>
-
-        <!-- Quick Division Bulk Applicator -->
-        <div style="background:#faf9f6; padding:14px 18px; border:1px solid var(--core-line); border-radius:4px; margin:16px 0 20px 0; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
-          <span style="font-size:12px; font-weight:700; color:var(--core-ink); text-transform:uppercase; letter-spacing:0.06em;">⚡ Quick Bulk Rate:</span>
-          <select id="bulkDivisionSelect" class="field-select" style="width:auto; padding:6px 12px; font-size:12px;">
-            {% for div_name in bangladesh_districts.keys() %}
-              <option value="{{ div_name }}">{{ div_name }}</option>
-            {% endfor %}
-          </select>
-          <input type="number" id="bulkDivisionRate" placeholder="Fee (e.g. 120)" class="field-input" style="width:110px; padding:6px 10px; font-size:12px;">
-          <button type="button" id="btnApplyBulkDivision" class="btn-ghost" style="padding:6px 14px; font-size:11px; font-weight:700;">Apply To Division</button>
-        </div>
-
-        <form method="post" action="/admin/settings/districts" id="districtRatesForm">
-          <input type="hidden" name="delivery_fee_dhaka" value="{{ settings.delivery_fee_dhaka or '60' }}">
-          <input type="hidden" name="delivery_fee_outside" value="{{ settings.delivery_fee_outside or '120' }}">
-
-          <div style="display:flex; flex-direction:column; gap:24px;">
-            {% for div_name, d_list in bangladesh_districts.items() %}
-            <div class="division-block" data-division="{{ div_name }}" style="border:1px solid var(--core-line); border-radius:6px; overflow:hidden;">
-              <div style="background:#f4f3ef; padding:10px 16px; font-size:13px; font-weight:700; color:var(--core-ink); display:flex; justify-content:space-between; align-items:center;">
-                <span>{{ div_name }} ({{ d_list|length }} Districts)</span>
-                <span style="font-size:11px; font-weight:500; color:var(--core-muted);">Bangladesh</span>
-              </div>
-              <div style="padding:16px; display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:12px; background:#fff;">
-                {% for code, bn, default_fee in d_list %}
-                  {% set current_rate = district_rates.get(code, default_fee)|int %}
-                  <div class="district-rate-item" data-name="{{ code.lower() }}" data-bn="{{ bn }}" data-div="{{ div_name }}" style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#faf9f6; border:1px solid rgba(23,26,24,0.08); border-radius:4px;">
-                    <div>
-                      <div style="font-weight:700; font-size:13px; color:var(--core-ink);">{{ code }}</div>
-                      <div style="font-size:11px; color:var(--core-muted);">{{ bn }}</div>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                      <span style="font-weight:700; font-size:13px; color:var(--core-ink);">৳</span>
-                      <input type="number" step="1" min="0" max="1000" name="dist_rate_{{ code }}" value="{{ current_rate }}" class="field-input dist-input" data-district="{{ code }}" style="width:78px; padding:6px 8px; font-size:13px; font-weight:700; text-align:right;" required>
-                    </div>
-                  </div>
-                {% endfor %}
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-
-          <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--core-line); display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; color:var(--core-muted);">All 64 districts configured. Changes take effect on storefront immediately.</span>
-            <button type="submit" class="btn-dark" style="padding:12px 24px; font-size:12px; letter-spacing:0.08em;">
-              SAVE DISTRICT DELIVERY CHARGES →
-            </button>
-          </div>
         </form>
       </div>
     </section>

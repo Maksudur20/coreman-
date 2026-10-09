@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCheckoutPaymentCards();
   initCategoryFilters();
   initCheckoutDistrictSync();
+  initStoreFlashAutoDismiss();
 });
 
 // Toast Manager
@@ -91,6 +92,32 @@ function initAjaxAddToCart() {
 
       showCartToast(data.product_name, data.product_price);
 
+      // Trigger Meta / Facebook Pixel AddToCart event
+      if (typeof fbq === 'function') {
+        fbq('track', 'AddToCart', {
+          content_ids: [formData.get('product_id')],
+          content_type: 'product',
+          value: data.product_price || undefined,
+          currency: 'BDT'
+        });
+      }
+
+      // Trigger Google Tag Manager / sGTM Add to Cart
+      if (window.dataLayer) {
+        window.dataLayer.push({
+          event: 'add_to_cart',
+          ecommerce: {
+            currency: 'BDT',
+            value: data.product_price || undefined,
+            items: [{
+              item_id: formData.get('product_id'),
+              item_name: data.product_name || undefined,
+              price: data.product_price || undefined,
+              quantity: 1
+            }]
+          }
+        });
+      }
     } catch (err) {
       console.error('Error adding to cart:', err);
     } finally {
@@ -215,26 +242,48 @@ async function removeCartItemDirectly(id, row) {
   }
 }
 
-// Dynamic Free Shipping Progress Meter Update
-function updateShippingMeter(total) {
-  const threshold = 3000;
-  const remaining = threshold - total;
-  const progressPct = Math.min(100, Math.max(0, Math.round((total / threshold) * 100)));
+// Dynamic Free Shipping & Combo Progress Meter Update
+function updateShippingMeter(total, cartCount) {
+  const card = document.getElementById('shippingMeterCard');
+  if (!card) return;
+
+  const comboMin = parseInt(card.getAttribute('data-combo-min') || '2', 10);
+  const feeDhaka = card.getAttribute('data-fee-dhaka') || '80';
+  const feeOutside = card.getAttribute('data-fee-outside') || '130';
+
+  let currentQty = cartCount;
+  if (currentQty === undefined) {
+    const qtyInputs = document.querySelectorAll('.qty-field');
+    currentQty = 0;
+    qtyInputs.forEach(i => { currentQty += parseInt(i.value || '0', 10); });
+  }
+
+  const isUnlocked = currentQty >= comboMin;
+  const remainingQty = Math.max(0, comboMin - currentQty);
+  const progressPct = isUnlocked ? 100 : Math.min(100, Math.round((currentQty / comboMin) * 100));
 
   const bar = document.querySelector('.shipping-meter-bar');
-  if (bar) bar.style.width = `${progressPct}%`;
+  if (bar) {
+    bar.style.width = `${progressPct}%`;
+    bar.style.background = isUnlocked ? '#16a34a' : 'linear-gradient(90deg, #171a18 0%, #a1632d 100%)';
+  }
 
   const header = document.querySelector('.shipping-meter-header');
   if (header) {
-    if (remaining <= 0) {
+    if (isUnlocked) {
+      card.classList.add('unlocked');
       header.innerHTML = `
         <span class="meter-icon">🎉</span>
-        <span class="meter-text"><strong>Congratulations!</strong> You have unlocked <strong>FREE Delivery</strong> inside Dhaka.</span>
+        <span class="meter-text"><strong>অভিনন্দন! কম্বো অফার আনলকড (Combo Offer Unlocked)</strong> — আপনি ${currentQty}টি প্রোডাক্ট অর্ডার করছেন, তাই সারা বাংলাদেশে <strong>FREE Delivery (৳০)</strong>!</span>
       `;
     } else {
+      card.classList.remove('unlocked');
       header.innerHTML = `
-        <span class="meter-icon">🚚</span>
-        <span class="meter-text">Add <strong>৳${Math.round(remaining)}</strong> more to unlock <strong>FREE Delivery</strong> inside Dhaka!</span>
+        <span class="meter-icon">🎁</span>
+        <span class="meter-text">
+          আর মাত্র <strong>${remainingQty}টি প্রোডাক্ট</strong> ব্যাগে যোগ করলেই পাচ্ছেন <strong>কম্বো অফার: সারা দেশে ১০০% ফ্রি ডেলিভারি!</strong>
+          <span style="display:block; font-size:11.5px; color:var(--core-muted); margin-top:3px;">(১টি প্রোডাক্ট নিলে ডেলিভারি চার্জ: ঢাকার ভেতরে ৳${feeDhaka} · ঢাকার বাইরে ৳${feeOutside})</span>
+        </span>
       `;
     }
   }
@@ -292,8 +341,9 @@ async function triggerCartSync(cartForm) {
       grandTotalEl.textContent = `৳${Math.round(data.total)}`;
     }
 
-    // Update shipping meter
-    updateShippingMeter(data.total);
+    // Update shipping meter with dynamic count
+    const totalUnits = data.total_qty !== undefined ? data.total_qty : data.cart_count;
+    updateShippingMeter(data.total, totalUnits);
 
   } catch (err) {
     console.error('Error syncing cart:', err);
@@ -361,10 +411,15 @@ function initCategoryFilters() {
   });
 }
 
-// Checkout District Delivery Charge & Grand Total Sync
+// Checkout Delivery Option & Grand Total Sync
 function initCheckoutDistrictSync() {
-  const districtSelect = document.getElementById('districtSelect');
-  if (!districtSelect) return;
+  const zoneRadioDhaka = document.getElementById('zoneRadioDhaka');
+  const zoneRadioOutside = document.getElementById('zoneRadioOutside');
+  const zoneCardDhaka = document.getElementById('zoneCardDhaka');
+  const zoneCardOutside = document.getElementById('zoneCardOutside');
+  const districtInput = document.getElementById('districtInput');
+
+  if (!zoneRadioDhaka && !zoneRadioOutside) return;
 
   function updateCharges() {
     const subtotalEl = document.getElementById('checkoutSubtotal');
@@ -372,53 +427,61 @@ function initCheckoutDistrictSync() {
     const subtotal = parseFloat(subtotalEl.getAttribute('data-subtotal')) || 0;
 
     const settings = window.COREMAN_SETTINGS || {
-      feeDhaka: 60,
-      feeOutside: 120,
-      freeThreshold: 3000,
-      districtRates: {}
+      feeDhaka: 80,
+      feeOutside: 130,
+      isComboFree: false,
+      totalQty: 1
     };
 
-    const selectedOpt = districtSelect.options[districtSelect.selectedIndex];
-    const selectedDistrict = districtSelect.value;
-    const districtRates = settings.districtRates || {};
+    const isDhaka = !zoneRadioOutside || !zoneRadioOutside.checked;
 
-    let fee;
-    if (districtRates && districtRates[selectedDistrict] !== undefined) {
-      fee = parseFloat(districtRates[selectedDistrict]);
-    } else if (selectedOpt && selectedOpt.getAttribute('data-fee')) {
-      fee = parseFloat(selectedOpt.getAttribute('data-fee'));
-    } else {
-      fee = (selectedDistrict.toLowerCase() === 'dhaka') ? settings.feeDhaka : settings.feeOutside;
+    // Card highlight state
+    if (zoneCardDhaka && zoneCardOutside) {
+      if (isDhaka) {
+        zoneCardDhaka.classList.add('selected');
+        zoneCardOutside.classList.remove('selected');
+        if (zoneRadioDhaka) zoneRadioDhaka.checked = true;
+      } else {
+        zoneCardOutside.classList.add('selected');
+        zoneCardDhaka.classList.remove('selected');
+        if (zoneRadioOutside) zoneRadioOutside.checked = true;
+      }
     }
 
-    const isDhaka = selectedDistrict.toLowerCase() === 'dhaka';
+    if (districtInput) {
+      districtInput.value = isDhaka ? 'Dhaka' : 'Outside Dhaka';
+    }
+
+    const feeDhaka = settings.feeDhaka || 80;
+    const feeOutside = settings.feeOutside || 130;
+    const baseFee = isDhaka ? feeDhaka : feeOutside;
+
     let isFree = false;
+    let freeTag = 'FREE';
 
-    // Inside Dhaka free delivery if subtotal >= threshold
-    if (isDhaka && subtotal >= settings.freeThreshold) {
-      fee = 0;
+    if (settings.isComboFree) {
       isFree = true;
+      freeTag = 'FREE (Combo Offer)';
     }
 
+    const fee = isFree ? 0 : baseFee;
     const grandTotal = subtotal + fee;
 
     // Update delivery fee label & display
     const feeLabel = document.getElementById('deliveryFeeLabel');
     const feeDisplay = document.getElementById('deliveryFeeDisplay');
     const grandTotalDisplay = document.getElementById('grandTotalDisplay');
-    const zoneText = document.getElementById('zoneText');
-    const zoneIcon = document.getElementById('zoneIcon');
     const etaText = document.getElementById('deliveryEtaText');
     const feeInput = document.getElementById('deliveryFeeInput');
     const finalTotalInput = document.getElementById('finalTotalInput');
 
     if (feeLabel) {
-      feeLabel.textContent = `Delivery Fee (${selectedDistrict})`;
+      feeLabel.textContent = `Delivery Charge (${isDhaka ? 'Inside Dhaka' : 'Outside Dhaka'})`;
     }
 
     if (feeDisplay) {
       if (isFree) {
-        feeDisplay.innerHTML = '<span style="color: #15803d; font-weight: 700;">FREE (Unlocked)</span>';
+        feeDisplay.innerHTML = `<span style="color: #15803d; font-weight: 700;">${freeTag}</span>`;
       } else {
         feeDisplay.innerHTML = `৳${Math.round(fee)}`;
       }
@@ -428,25 +491,38 @@ function initCheckoutDistrictSync() {
       grandTotalDisplay.textContent = `৳${Math.round(grandTotal)}`;
     }
 
-    if (zoneText) {
-      zoneText.textContent = `${selectedDistrict} (${isFree ? 'FREE' : '৳' + Math.round(fee)})`;
-    }
-
-    if (zoneIcon) {
-      zoneIcon.textContent = isDhaka ? '⚡' : '🚚';
-    }
-
     if (etaText) {
       etaText.innerHTML = isDhaka
         ? '<strong>Delivery ETA:</strong> 1-2 Days within Dhaka Metro'
-        : `<strong>Delivery ETA:</strong> 3-5 Days delivery to ${selectedDistrict}`;
+        : '<strong>Delivery ETA:</strong> 2-4 Days delivery outside Dhaka';
     }
 
     if (feeInput) feeInput.value = fee;
     if (finalTotalInput) finalTotalInput.value = grandTotal;
   }
 
-  districtSelect.addEventListener('change', updateCharges);
+  // Radio button change listeners
+  if (zoneRadioDhaka) {
+    zoneRadioDhaka.addEventListener('change', updateCharges);
+  }
+  if (zoneRadioOutside) {
+    zoneRadioOutside.addEventListener('change', updateCharges);
+  }
+
+  // Card click triggers
+  if (zoneCardDhaka) {
+    zoneCardDhaka.addEventListener('click', () => {
+      if (zoneRadioDhaka) zoneRadioDhaka.checked = true;
+      updateCharges();
+    });
+  }
+  if (zoneCardOutside) {
+    zoneCardOutside.addEventListener('click', () => {
+      if (zoneRadioOutside) zoneRadioOutside.checked = true;
+      updateCharges();
+    });
+  }
+
   // Run once on load to ensure initial sum is perfectly synchronized
   updateCharges();
 }
@@ -582,3 +658,55 @@ function initHeroSlider() {
   updateSlider(0, false);
   startAutoplay();
 }
+
+// Flash Message Auto-Dismiss (5 Seconds)
+function initStoreFlashAutoDismiss() {
+  const flashMessages = document.querySelectorAll('.flash, .flash-wrap > div');
+  flashMessages.forEach((msg) => {
+    if (msg.dataset.dismissScheduled) return;
+    msg.dataset.dismissScheduled = 'true';
+
+    // Add close button if not present
+    if (!msg.querySelector('.flash-close-btn')) {
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.innerHTML = '&times;';
+      closeBtn.className = 'flash-close-btn';
+      closeBtn.title = 'Dismiss';
+      closeBtn.style.cssText = 'background:none; border:none; font-size:18px; line-height:1; cursor:pointer; color:inherit; opacity:0.6; padding:0 0 0 12px; margin-left:auto;';
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        dismissStoreFlash(msg);
+      };
+      msg.appendChild(closeBtn);
+    }
+
+    setTimeout(() => {
+      dismissStoreFlash(msg);
+    }, 5000);
+  });
+}
+
+function dismissStoreFlash(el) {
+  if (!el || el.dataset.dismissing) return;
+  el.dataset.dismissing = 'true';
+  el.style.transition = 'opacity 0.4s ease, transform 0.4s ease, max-height 0.4s ease, margin 0.4s ease, padding 0.4s ease';
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(-8px)';
+  setTimeout(() => {
+    el.style.maxHeight = '0';
+    el.style.marginTop = '0';
+    el.style.marginBottom = '0';
+    el.style.paddingTop = '0';
+    el.style.paddingBottom = '0';
+    el.style.overflow = 'hidden';
+    setTimeout(() => {
+      const parent = el.parentElement;
+      el.remove();
+      if (parent && parent.children.length === 0 && parent.classList.contains('flash-wrap')) {
+        parent.remove();
+      }
+    }, 400);
+  }, 400);
+}
+

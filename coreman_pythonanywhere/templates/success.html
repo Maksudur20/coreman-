@@ -12,4 +12,28 @@
     <a class="btn dark" href="/">CONTINUE SHOPPING</a>
   </div>
 </main>
+
+{% if store_settings and (store_settings.meta_pixel_id or store_settings.gtm_container_id) and not is_bot %}
+<script>
+  if (typeof fbq === 'function') {
+    fbq('track', 'Purchase', {
+      value: {{ total }},
+      currency: 'BDT',
+      content_type: 'product'
+    }, {
+      eventID: 'order_{{ order_id }}'
+    });
+  }
+  if (window.dataLayer) {
+    window.dataLayer.push({
+      event: 'purchase',
+      ecommerce: {
+        transaction_id: '{{ order_id }}',
+        value: {{ total }},
+        currency: 'BDT'
+      }
+    });
+  }
+</script>
+{% endif %}
 {% endblock %}

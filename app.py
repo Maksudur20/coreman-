@@ -1,8 +1,14 @@
+import hashlib
 import json
 import os
+import re
 import smtplib
+import threading
 import time
+import urllib.parse
+import urllib.request
 import uuid
+from datetime import timedelta
 from decimal import Decimal
 from email.message import EmailMessage
 
@@ -53,6 +59,8 @@ if IS_PRODUCTION and not secret_key:
     raise RuntimeError('SECRET_KEY must be configured for production.')
 app.secret_key = secret_key or 'coreman-super-secure-session-key-2026'
 
+# 1 Year Permanent Cookie Lifetime (365 Days)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = IS_PRODUCTION
@@ -92,84 +100,84 @@ def reset_failed_attempts(ip):
 
 BANGLADESH_DISTRICTS = {
     'Dhaka Division': [
-        ('Dhaka', 'ঢাকা (Metro)', 60),
-        ('Gazipur', 'গাজীপুর', 80),
-        ('Narayanganj', 'নারায়ণগঞ্জ', 80),
-        ('Tangail', 'টাঙ্গাইল', 120),
-        ('Narsingdi', 'নরসিংদী', 100),
-        ('Manikganj', 'মানিকগঞ্জ', 100),
-        ('Munshiganj', 'মুন্সীগঞ্জ', 100),
-        ('Kishoreganj', 'কিশোরগঞ্জ', 120),
-        ('Faridpur', 'ফরিদপুর', 120),
-        ('Gopalganj', 'গোপালগঞ্জ', 120),
-        ('Madaripur', 'মাদারীপুর', 120),
-        ('Rajbari', 'রাজবাড়ী', 120),
-        ('Shariatpur', 'শরীয়তপুর', 120),
+        ('Dhaka', 'ঢাকা (Metro)', 80),
+        ('Gazipur', 'গাজীপুর', 130),
+        ('Narayanganj', 'নারায়ণগঞ্জ', 130),
+        ('Tangail', 'টাঙ্গাইল', 130),
+        ('Narsingdi', 'নরসিংদী', 130),
+        ('Manikganj', 'মানিকগঞ্জ', 130),
+        ('Munshiganj', 'মুন্সীগঞ্জ', 130),
+        ('Kishoreganj', 'কিশোরগঞ্জ', 130),
+        ('Faridpur', 'ফরিদপুর', 130),
+        ('Gopalganj', 'গোপালগঞ্জ', 130),
+        ('Madaripur', 'মাদারীপুর', 130),
+        ('Rajbari', 'রাজবাড়ী', 130),
+        ('Shariatpur', 'শরীয়তপুর', 130),
     ],
     'Chattogram Division': [
-        ('Chittagong', 'চট্টগ্রাম', 120),
+        ('Chittagong', 'চট্টগ্রাম', 130),
         ('Cox\'s Bazar', 'কক্সবাজার', 130),
-        ('Cumilla', 'কুমিল্লা', 110),
-        ('Feni', 'ফেনী', 110),
-        ('Brahmanbaria', 'ব্রাহ্মণবাড়িয়া', 120),
-        ('Chandpur', 'চাঁদপুর', 120),
-        ('Noakhali', 'নোয়াখালী', 120),
-        ('Lakshmipur', 'লক্ষ্মীপুর', 120),
-        ('Rangamati', 'রাঙ্গামাটি', 140),
-        ('Bandarban', 'বান্দরবান', 140),
-        ('Khagrachhari', 'খাগড়াছড়ি', 140),
+        ('Cumilla', 'কুমিল্লা', 130),
+        ('Feni', 'ফেনী', 130),
+        ('Brahmanbaria', 'ব্রাহ্মণবাড়িয়া', 130),
+        ('Chandpur', 'চাঁদপুর', 130),
+        ('Noakhali', 'নোয়াখালী', 130),
+        ('Lakshmipur', 'লক্ষ্মীপুর', 130),
+        ('Rangamati', 'রাঙ্গামাটি', 130),
+        ('Bandarban', 'বান্দরবান', 130),
+        ('Khagrachhari', 'খাগড়াছড়ি', 130),
     ],
     'Sylhet Division': [
-        ('Sylhet', 'সিলেট', 120),
-        ('Moulvibazar', 'মৌলভীবাজার', 120),
-        ('Habiganj', 'হবিগঞ্জ', 120),
+        ('Sylhet', 'সিলেট', 130),
+        ('Moulvibazar', 'মৌলভীবাজার', 130),
+        ('Habiganj', 'হবিগঞ্জ', 130),
         ('Sunamganj', 'সুনামগঞ্জ', 130),
     ],
     'Rajshahi Division': [
-        ('Rajshahi', 'রাজশাহী', 120),
-        ('Bogura', 'বগুড়া', 120),
-        ('Pabna', 'পাবনা', 120),
-        ('Sirajganj', 'সিরাজগঞ্জ', 120),
-        ('Naogaon', 'নওগাঁ', 120),
-        ('Natore', 'নাটোর', 120),
+        ('Rajshahi', 'রাজশাহী', 130),
+        ('Bogura', 'বগুড়া', 130),
+        ('Pabna', 'পাবনা', 130),
+        ('Sirajganj', 'সিরাজগঞ্জ', 130),
+        ('Naogaon', 'নওগাঁ', 130),
+        ('Natore', 'নাটোর', 130),
         ('Chapainawabganj', 'চাঁপাইনবাবগঞ্জ', 130),
-        ('Joypurhat', 'জয়পুরহাট', 120),
+        ('Joypurhat', 'জয়পুরহাট', 130),
     ],
     'Khulna Division': [
-        ('Khulna', 'খুলনা', 120),
-        ('Jashore', 'যশোর', 120),
-        ('Kushtia', 'কুষ্টিয়া', 120),
-        ('Jhenaidah', 'ঝিনাইদহ', 120),
+        ('Khulna', 'খুলনা', 130),
+        ('Jashore', 'যশোর', 130),
+        ('Kushtia', 'কুষ্টিয়া', 130),
+        ('Jhenaidah', 'ঝিনাইদহ', 130),
         ('Satkhira', 'সাতক্ষীরা', 130),
-        ('Bagerhat', 'বাগেরহাট', 120),
-        ('Chuadanga', 'চুয়াডাঙ্গা', 120),
-        ('Meherpur', 'মেহেরপুর', 120),
-        ('Magura', 'মাগুরা', 120),
-        ('Narail', 'নড়াইল', 120),
+        ('Bagerhat', 'বাগেরহাট', 130),
+        ('Chuadanga', 'চুয়াডাঙ্গা', 130),
+        ('Meherpur', 'মেহেরপুর', 130),
+        ('Magura', 'মাগুরা', 130),
+        ('Narail', 'নড়াইল', 130),
     ],
     'Barisal Division': [
-        ('Barisal', 'বরিশাল', 120),
+        ('Barisal', 'বরিশাল', 130),
         ('Patuakhali', 'পটুয়াখালী', 130),
         ('Bhola', 'ভোলা', 130),
-        ('Pirojpur', 'পিরোজপুর', 120),
+        ('Pirojpur', 'পিরোজপুর', 130),
         ('Barguna', 'বরগুনা', 130),
-        ('Jhalokathi', 'ঝালকাঠি', 120),
+        ('Jhalokathi', 'ঝালকাঠি', 130),
     ],
     'Rangpur Division': [
-        ('Rangpur', 'রংপুর', 120),
+        ('Rangpur', 'রংপুর', 130),
         ('Dinajpur', 'দিনাজপুর', 130),
         ('Kurigram', 'কুড়িগ্রাম', 130),
-        ('Gaibandha', 'গাইবান্ধা', 120),
+        ('Gaibandha', 'গাইবান্ধা', 130),
         ('Nilphamari', 'নীলফামারী', 130),
         ('Lalmonirhat', 'লালমনিরহাট', 130),
-        ('Thakurgaon', 'ঠাকুরগাঁও', 140),
-        ('Panchagarh', 'পঞ্চগড়', 140),
+        ('Thakurgaon', 'ঠাকুরগাঁও', 130),
+        ('Panchagarh', 'পঞ্চগড়', 130),
     ],
     'Mymensingh Division': [
-        ('Mymensingh', 'ময়মনসিংহ', 110),
-        ('Jamalpur', 'জামালপুর', 120),
-        ('Netrokona', 'নেত্রকোণা', 120),
-        ('Sherpur', 'শেরপুর', 120),
+        ('Mymensingh', 'ময়মনসিংহ', 130),
+        ('Jamalpur', 'জামালপুর', 130),
+        ('Netrokona', 'নেত্রকোণা', 130),
+        ('Sherpur', 'শেরপুর', 130),
     ],
 }
 
@@ -178,15 +186,15 @@ def get_district_rates(store_settings=None):
     if store_settings is None:
         store_settings = get_cached_settings()
     rates = {}
-    fee_dhaka = float(store_settings.get('delivery_fee_dhaka') or 60)
-    fee_outside = float(store_settings.get('delivery_fee_outside') or 120)
+    fee_dhaka = float(store_settings.get('delivery_fee_dhaka') or 80)
+    fee_outside = float(store_settings.get('delivery_fee_outside') or 130)
 
     for div, d_list in BANGLADESH_DISTRICTS.items():
         for code, bn, default_fee in d_list:
             if code == 'Dhaka':
                 rates[code] = fee_dhaka
             else:
-                rates[code] = default_fee if default_fee != 120 else fee_outside
+                rates[code] = fee_outside
 
     raw_custom = store_settings.get('district_rates')
     if raw_custom:
@@ -247,6 +255,131 @@ def save_hero_slides(slides):
     invalidate_settings_cache()
 
 
+BOT_USER_AGENTS = (
+    'bot', 'crawl', 'spider', 'slurp', 'facebookexternalhit',
+    'ahrefs', 'semrush', 'googlebot', 'bingbot', 'yandex', 'petalbot'
+)
+
+
+def is_bot_request():
+    ua = (request.user_agent.string or '').lower()
+    return any(b in ua for b in BOT_USER_AGENTS)
+
+
+def sha256_hash(val):
+    if not val:
+        return None
+    val = str(val).strip().lower()
+    return hashlib.sha256(val.encode('utf-8')).hexdigest()
+
+
+def normalize_bd_phone(phone):
+    if not phone:
+        return None
+    p = re.sub(r'[^0-9+]', '', str(phone))
+    if p.startswith('01'):
+        p = '+88' + p
+    elif p.startswith('8801'):
+        p = '+' + p
+    return p
+
+
+def dispatch_meta_capi_purchase(pixel_id, access_token, order_id, total, items, email, phone, name, client_ip, user_agent, fbp=None, fbc=None, test_code=None):
+    if not pixel_id or not access_token:
+        return
+
+    def _send():
+        try:
+            em_list = [sha256_hash(email)] if email else []
+            ph_list = [sha256_hash(normalize_bd_phone(phone))] if phone else []
+            name_parts = (name or '').strip().split()
+            fn_list = [sha256_hash(name_parts[0])] if name_parts else []
+            ln_list = [sha256_hash(name_parts[-1])] if len(name_parts) > 1 else []
+
+            user_data = {
+                "em": em_list,
+                "ph": ph_list,
+                "fn": fn_list,
+                "ln": ln_list,
+                "country": [sha256_hash("bd")],
+                "client_ip_address": client_ip,
+                "client_user_agent": user_agent,
+            }
+            if fbp:
+                user_data["fbp"] = fbp
+            if fbc:
+                user_data["fbc"] = fbc
+
+            payload = {
+                "data": [{
+                    "event_name": "Purchase",
+                    "event_time": int(time.time()),
+                    "event_id": f"order_{order_id}",
+                    "action_source": "website",
+                    "user_data": user_data,
+                    "custom_data": {
+                        "currency": "BDT",
+                        "value": float(total),
+                        "content_type": "product",
+                        "contents": [
+                            {"id": str(i.get('id')), "quantity": int(i.get('qty', 1)), "item_price": float(i.get('price', 0))}
+                            for i in items
+                        ],
+                        "num_items": sum(int(i.get('qty', 1)) for i in items)
+                    }
+                }]
+            }
+            if test_code:
+                payload["test_event_code"] = test_code.strip()
+
+            url = f"https://graph.facebook.com/v19.0/{pixel_id}/events?access_token={access_token}"
+            data_bytes = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(url, data=data_bytes, headers={'Content-Type': 'application/json'})
+            with urllib.request.urlopen(req, timeout=8):
+                pass
+        except Exception as exc:
+            print(f"Meta CAPI background dispatch warning: {exc}")
+
+    threading.Thread(target=_send, daemon=True).start()
+
+
+@app.before_request
+def handle_session_and_tracking():
+    session.permanent = True
+    # Click ID Restorer: Capture fbclid if visitor arrives from Facebook Ad
+    fbclid = request.args.get('fbclid')
+    if fbclid:
+        session['fbclid'] = fbclid.strip()
+
+
+@app.after_request
+def cookie_keeper_and_tracker(response):
+    # Cookie Keeper for Click ID (_fbc)
+    fbclid = session.get('fbclid')
+    if fbclid and not request.cookies.get('_fbc'):
+        fbc_val = f"fb.1.{int(time.time() * 1000)}.{fbclid}"
+        response.set_cookie(
+            '_fbc',
+            fbc_val,
+            max_age=31536000,
+            httponly=False,
+            samesite='Lax',
+            secure=IS_PRODUCTION
+        )
+    # Cookie Life Extension for _fbp (Browser ID)
+    fbp = request.cookies.get('_fbp')
+    if fbp:
+        response.set_cookie(
+            '_fbp',
+            fbp,
+            max_age=31536000,
+            httponly=False,
+            samesite='Lax',
+            secure=IS_PRODUCTION
+        )
+    return response
+
+
 @app.context_processor
 def inject_globals():
     cart = session.get('cart', {}) or {}
@@ -261,6 +394,7 @@ def inject_globals():
         'district_rates': d_rates,
         'district_rates_json': json.dumps(d_rates),
         'is_postgres': is_postgres(),
+        'is_bot': is_bot_request(),
     }
 
 
@@ -500,7 +634,20 @@ def add_cart():
 @app.get('/cart')
 def cart():
     items, total = cart_items()
-    return render_template('cart.html', items=items, total=total)
+    store_settings = get_cached_settings()
+    total_qty = sum(int(item.get('qty', 1)) for item in items)
+    combo_enabled = str(store_settings.get('combo_free_delivery', 'true')).strip().lower() in ('true', '1', 'yes')
+    combo_min_items = int(store_settings.get('combo_min_items') or 2)
+    is_combo_free = combo_enabled and (total_qty >= combo_min_items)
+    return render_template(
+        'cart.html',
+        items=items,
+        total=total,
+        total_qty=total_qty,
+        combo_enabled=combo_enabled,
+        combo_min_items=combo_min_items,
+        is_combo_free=is_combo_free
+    )
 
 
 @app.post('/cart/update')
@@ -525,9 +672,11 @@ def update_cart():
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json or request.accept_mimetypes.best == 'application/json':
         items, total = cart_items()
+        total_count = sum(int(qty) for qty in cart.values() if str(qty).isdigit())
         return jsonify({
             'success': True,
-            'cart_count': sum(int(qty) for qty in cart.values() if str(qty).isdigit()),
+            'cart_count': total_count,
+            'total_qty': total_count,
             'total': total,
             'items': items,
         })
@@ -543,9 +692,11 @@ def remove_cart_item(product_id):
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json or request.accept_mimetypes.best == 'application/json':
         items, total = cart_items()
+        total_count = sum(int(qty) for qty in cart.values() if str(qty).isdigit())
         return jsonify({
             'success': True,
-            'cart_count': sum(int(qty) for qty in cart.values() if str(qty).isdigit()),
+            'cart_count': total_count,
+            'total_qty': total_count,
             'total': total,
             'items': items,
         })
@@ -560,18 +711,28 @@ def checkout():
         return redirect(url_for('home'))
 
     store_settings = get_cached_settings()
-    threshold = float(store_settings.get('free_shipping_threshold') or 3000)
-    d_rates = get_district_rates(store_settings)
-    fee_dhaka = float(d_rates.get('Dhaka', 60))
+    fee_dhaka = float(store_settings.get('delivery_fee_dhaka') or 80)
+    fee_outside = float(store_settings.get('delivery_fee_outside') or 130)
 
-    # Initial default is Dhaka
-    initial_fee = 0.0 if total >= threshold else fee_dhaka
+    combo_enabled = str(store_settings.get('combo_free_delivery', 'true')).strip().lower() in ('true', '1', 'yes')
+    combo_min_items = int(store_settings.get('combo_min_items') or 2)
+    total_qty = sum(int(item.get('qty', 1)) for item in items)
+    is_combo_free = combo_enabled and (total_qty >= combo_min_items)
+
+    # Initial default is Dhaka (80 or 0 if combo free)
+    initial_fee = 0.0 if is_combo_free else fee_dhaka
     initial_grand_total = total + initial_fee
 
     return render_template(
         'checkout.html',
         items=items,
         total=total,
+        total_qty=total_qty,
+        is_combo_free=is_combo_free,
+        combo_enabled=combo_enabled,
+        combo_min_items=combo_min_items,
+        fee_dhaka=fee_dhaka,
+        fee_outside=fee_outside,
         initial_fee=initial_fee,
         initial_grand_total=initial_grand_total,
         cod_only=COD_ONLY
@@ -588,29 +749,34 @@ def place_order():
     email = request.form.get('email', '').strip()
     phone = request.form.get('phone', '').strip()
     address = request.form.get('address', '').strip()
-    district = request.form.get('district', 'Dhaka').strip()
+    delivery_zone = request.form.get('delivery_zone', 'dhaka').strip().lower()
+    district = request.form.get('district', '').strip() or ('Dhaka' if delivery_zone == 'dhaka' else 'Outside Dhaka')
     method = request.form.get('payment_method', 'Cash on Delivery')
 
     if COD_ONLY and method != 'Cash on Delivery':
         flash('Online payment is not available yet. Please choose Cash on Delivery.', 'error')
         return redirect(url_for('checkout'))
 
-    # Calculate delivery charge based on district rates
     store_settings = get_cached_settings()
-    threshold = float(store_settings.get('free_shipping_threshold') or 3000)
-    d_rates = get_district_rates(store_settings)
+    fee_dhaka = float(store_settings.get('delivery_fee_dhaka') or 80)
+    fee_outside = float(store_settings.get('delivery_fee_outside') or 130)
 
-    is_dhaka = district.lower() == 'dhaka'
-    assigned_fee = float(d_rates.get(district, 120 if not is_dhaka else 60))
+    combo_enabled = str(store_settings.get('combo_free_delivery', 'true')).strip().lower() in ('true', '1', 'yes')
+    combo_min_items = int(store_settings.get('combo_min_items') or 2)
+    total_qty = sum(int(item.get('qty', 1)) for item in items)
+    is_combo_free = combo_enabled and (total_qty >= combo_min_items)
 
-    if is_dhaka and total >= threshold:
+    is_dhaka = (delivery_zone == 'dhaka')
+    assigned_fee = fee_dhaka if is_dhaka else fee_outside
+
+    if is_combo_free:
         delivery_fee = 0.0
     else:
         delivery_fee = assigned_fee
 
     # Grand total includes items subtotal + delivery fee!
     grand_total = total + delivery_fee
-    delivery_eta = '1-2 Days (Dhaka Metro)' if is_dhaka else f'3-5 Days ({district})'
+    delivery_eta = '1-2 Days (Dhaka Metro)' if is_dhaka else '2-4 Days (Outside Dhaka)'
     full_shipping_destination = f"{address}, {district}"
 
     db_inst = get_db()
@@ -665,6 +831,27 @@ def place_order():
     if live_payment_url:
         return redirect(live_payment_url)
 
+    # Meta Conversions API (CAPI) Server-Side Event Dispatch
+    m_pixel_id = store_settings.get('meta_pixel_id')
+    m_capi_token = store_settings.get('meta_capi_token')
+    if m_pixel_id and m_capi_token:
+        client_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+        dispatch_meta_capi_purchase(
+            pixel_id=m_pixel_id,
+            access_token=m_capi_token,
+            order_id=order_id,
+            total=grand_total,
+            items=items,
+            email=email,
+            phone=phone,
+            name=name,
+            client_ip=client_ip,
+            user_agent=request.user_agent.string,
+            fbp=request.cookies.get('_fbp'),
+            fbc=request.cookies.get('_fbc') or (f"fb.1.{int(time.time() * 1000)}.{session.get('fbclid')}" if session.get('fbclid') else None),
+            test_code=store_settings.get('meta_test_code')
+        )
+
     return render_template(
         'success.html',
         order_id=order_id,
@@ -713,6 +900,7 @@ def admin_login_submit():
     if is_valid:
         reset_failed_attempts(client_ip)
         session.regenerate() if hasattr(session, 'regenerate') else None
+        session.permanent = True
         session['admin_logged_in'] = True
         session['admin_username'] = username
         flash('Welcome back! Logged in to COREMAN Admin Suite.', 'success')
@@ -1160,9 +1348,15 @@ def update_store_settings():
         'delivery_fee_dhaka',
         'delivery_fee_outside',
         'free_shipping_threshold',
+        'combo_free_delivery',
+        'combo_min_items',
         'contact_phone',
         'contact_email',
         'announcement',
+        'meta_pixel_id',
+        'meta_capi_token',
+        'meta_test_code',
+        'gtm_container_id',
     ]
     for field in fields:
         val = request.form.get(field, '').strip()

@@ -1,1 +1,56 @@
-{% extends 'base.html' %}{% block content %}<main class="product"><img src="{{p.image}}"><div><p>{{p.category}}</p><h1>{{p.name}}</h1><h2>৳{{'%.0f'|format(p.price)}}</h2><p>Premium everyday piece from the COREMAN collection.</p><form method="post" action="/cart/add"><input type="hidden" name="product_id" value="{{p.id}}"><button class="btn dark">ADD TO CART</button></form></div></main>{% endblock %}
+{% extends 'base.html' %}
+{% block content %}
+<main class="product">
+  <img src="{{ p.image }}" alt="{{ p.name }}" onerror="this.src='/static/uploads/default-classic-black-tee.svg'">
+  <div>
+    <p class="eyebrow accent">{{ p.category }}</p>
+    <h1>{{ p.name }}</h1>
+    <h2>৳{{ '%.0f'|format(p.price) }}</h2>
+    <p class="product-desc">{{ p.description or 'Premium everyday piece from the COREMAN collection.' }}</p>
+    
+    {% if p.stock is defined and p.stock <= 0 %}
+      <p style="color: #dc2626; font-weight: 700; margin-top: 16px;">Currently Out of Stock</p>
+      <button class="btn dark" disabled style="opacity: 0.5; cursor: not-allowed;">OUT OF STOCK</button>
+    {% else %}
+      {% if p.stock is defined and p.stock <= 10 %}
+        <p style="color: #d97706; font-size: 13px; font-weight: 600; margin-top: 12px;">Only {{ p.stock }} items left in stock!</p>
+      {% endif %}
+      <form method="post" action="/cart/add" style="margin-top: 20px;">
+        <input type="hidden" name="product_id" value="{{ p.id }}">
+        <button class="btn dark" type="submit">ADD TO CART</button>
+      </form>
+    {% endif %}
+  </div>
+</main>
+
+{% if store_settings and (store_settings.meta_pixel_id or store_settings.gtm_container_id) and not is_bot %}
+<script>
+  if (typeof fbq === 'function') {
+    fbq('track', 'ViewContent', {
+      content_name: '{{ p.name|replace("\'", "\\\'") }}',
+      content_category: '{{ p.category|replace("\'", "\\\'") }}',
+      content_ids: ['{{ p.id }}'],
+      content_type: 'product',
+      value: {{ p.price }},
+      currency: 'BDT'
+    });
+  }
+  if (window.dataLayer) {
+    window.dataLayer.push({
+      event: 'view_item',
+      ecommerce: {
+        currency: 'BDT',
+        value: {{ p.price }},
+        items: [{
+          item_id: '{{ p.id }}',
+          item_name: '{{ p.name|replace("\'", "\\\'") }}',
+          item_category: '{{ p.category|replace("\'", "\\\'") }}',
+          price: {{ p.price }},
+          quantity: 1
+        }]
+      }
+    });
+  }
+</script>
+{% endif %}
+{% endblock %}

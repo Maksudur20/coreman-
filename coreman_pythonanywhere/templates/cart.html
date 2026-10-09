@@ -1,1 +1,102 @@
-{% extends 'base.html' %}{% block content %}<main class="page"><h1>Your Cart</h1>{% if items %}<form method="post" action="/cart/update">{% for x in items %}<div class="cartrow"><img src="{{x.image}}"><div><h3>{{x.name}}</h3><p>৳{{'%.0f'|format(x.price)}} × <input class="qty" name="qty_{{x.id}}" value="{{x.qty}}" type="number" min="0"></p></div><b>৳{{'%.0f'|format(x.subtotal)}}</b></div>{% endfor %}<button class="btn">UPDATE CART</button></form><div class="total">Total: ৳{{'%.0f'|format(total)}} <a class="btn dark" href="/checkout">CHECKOUT</a></div>{% else %}<p>Your cart is empty.</p>{% endif %}</main>{% endblock %}
+{% extends 'base.html' %}
+{% block content %}
+<main class="page">
+  <div class="cart-wrap">
+    <div class="sectionhead" style="margin-bottom: 24px;">
+      <h2>Your Shopping Bag</h2>
+      <span>{{ items|length }} ITEM{% if items|length != 1 %}S{% endif %}</span>
+    </div>
+
+    {% if items %}
+      {% set combo_min = (store_settings.combo_min_items|int) if store_settings and store_settings.combo_min_items else 2 %}
+      {% set current_qty = total_qty|default(items|sum(attribute='qty')) %}
+      {% set is_unlocked = current_qty >= combo_min %}
+      {% set remaining_qty = combo_min - current_qty %}
+      {% set progress_pct = 100 if is_unlocked else (current_qty / combo_min * 100)|int %}
+
+      <!-- Free Shipping Dynamic Progress Bar -->
+      <div class="shipping-meter-card {% if is_unlocked %}unlocked{% endif %}" id="shippingMeterCard" data-combo-min="{{ combo_min }}" data-fee-dhaka="{{ store_settings.delivery_fee_dhaka or '80' }}" data-fee-outside="{{ store_settings.delivery_fee_outside or '130' }}">
+        <div class="shipping-meter-header" id="shippingMeterHeader">
+          {% if is_unlocked %}
+            <span class="meter-icon">🎉</span>
+            <span class="meter-text"><strong>অভিনন্দন! কম্বো অফার আনলকড (Combo Offer Unlocked)</strong> — আপনি {{ current_qty }}টি প্রোডাক্ট অর্ডার করছেন, তাই সারা বাংলাদেশে <strong>FREE Delivery (৳০)</strong>!</span>
+          {% else %}
+            <span class="meter-icon">🎁</span>
+            <span class="meter-text">
+              আর মাত্র <strong>{{ remaining_qty }}টি প্রোডাক্ট</strong> ব্যাগে যোগ করলেই পাচ্ছেন <strong>কম্বো অফার: সারা দেশে ১০০% ফ্রি ডেলিভারি!</strong>
+              <span style="display:block; font-size:11.5px; color:var(--core-muted); margin-top:3px;">(১টি প্রোডাক্ট নিলে ডেলিভারি চার্জ: ঢাকার ভেতরে ৳{{ store_settings.delivery_fee_dhaka or '80' }} · ঢাকার বাইরে ৳{{ store_settings.delivery_fee_outside or '130' }})</span>
+            </span>
+          {% endif %}
+        </div>
+        <div class="shipping-meter-track">
+          <div class="shipping-meter-bar" style="width: {{ progress_pct }}%; {% if is_unlocked %}background: #16a34a;{% endif %}"></div>
+        </div>
+      </div>
+
+      <div class="cart-card">
+        <form id="cartUpdateForm" method="post" action="/cart/update">
+          {% for x in items %}
+          <div class="cart-item-row" id="cart-item-row-{{ x.id }}">
+            <!-- Compact, elegant product thumbnail -->
+            <div class="cart-item-media">
+              <a href="/product/{{ x.id }}">
+                <img src="{{ x.image }}" alt="{{ x.name }}" onerror="this.src='/static/uploads/default-classic-black-tee.svg'">
+              </a>
+            </div>
+
+            <div class="cart-item-details">
+              <div class="cart-item-info">
+                <a href="/product/{{ x.id }}" style="text-decoration:none; color:inherit;">
+                  <h3 class="cart-item-title">{{ x.name }}</h3>
+                </a>
+                <div class="cart-item-price-unit">৳{{ '%.0f'|format(x.price) }} / unit</div>
+              </div>
+
+              <div class="cart-item-controls">
+                <!-- Custom Stepper with Plus and Minus (No browser arrows) -->
+                <div class="stepper-box">
+                  <button type="button" class="stepper-btn btn-stepper-minus" data-id="{{ x.id }}" aria-label="Decrease quantity">−</button>
+                  <span class="stepper-val" id="qty-val-{{ x.id }}">{{ x.qty }}</span>
+                  <input type="hidden" name="qty_{{ x.id }}" id="qty-input-{{ x.id }}" value="{{ x.qty }}" class="qty-field">
+                  <button type="button" class="stepper-btn btn-stepper-plus" data-id="{{ x.id }}" aria-label="Increase quantity">+</button>
+                </div>
+
+                <button type="button" class="btn-item-delete" data-id="{{ x.id }}" title="Remove item">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  Remove
+                </button>
+              </div>
+            </div>
+
+            <div class="cart-item-subtotal">
+              <span class="subtotal-label">Subtotal</span>
+              <div class="subtotal-amount" id="subtotal-{{ x.id }}">৳{{ '%.0f'|format(x.subtotal) }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </form>
+
+        <div class="cart-footer-bar">
+          <div class="cart-subtotal-block">
+            <div class="cart-subtotal-label">Subtotal (<span id="cartItemCountLabel">{{ items|length }}</span> item{% if items|length != 1 %}s{% endif %})</div>
+            <div class="cart-subtotal-val" id="cartGrandTotal">৳{{ '%.0f'|format(total) }}</div>
+            <div class="cart-subtotal-note">Taxes and shipping calculated at checkout</div>
+          </div>
+
+          <div class="cart-action-buttons">
+            <a href="/#shop" class="cart-action-btn cart-btn-secondary">← CONTINUE SHOPPING</a>
+            <a href="/checkout" class="cart-action-btn cart-btn-primary">PROCEED TO CHECKOUT →</a>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="cart-card" style="text-align: center; padding: 70px 20px;">
+        <div style="font-size: 40px; margin-bottom: 14px;">🛍️</div>
+        <h2 style="font-size: 22px; margin-bottom: 8px;">Your shopping bag is empty</h2>
+        <p style="font-size: 14px; color: var(--core-muted); margin-bottom: 24px;">Explore our new 2026 collection and find everyday essentials.</p>
+        <a class="btn dark" href="/#shop" style="display: inline-block; padding: 14px 32px;">DISCOVER COLLECTION</a>
+      </div>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

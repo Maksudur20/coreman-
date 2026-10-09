@@ -22,4 +22,35 @@
     {% endif %}
   </div>
 </main>
+
+{% if store_settings and (store_settings.meta_pixel_id or store_settings.gtm_container_id) and not is_bot %}
+<script>
+  if (typeof fbq === 'function') {
+    fbq('track', 'ViewContent', {
+      content_name: '{{ p.name|replace("\'", "\\\'") }}',
+      content_category: '{{ p.category|replace("\'", "\\\'") }}',
+      content_ids: ['{{ p.id }}'],
+      content_type: 'product',
+      value: {{ p.price }},
+      currency: 'BDT'
+    });
+  }
+  if (window.dataLayer) {
+    window.dataLayer.push({
+      event: 'view_item',
+      ecommerce: {
+        currency: 'BDT',
+        value: {{ p.price }},
+        items: [{
+          item_id: '{{ p.id }}',
+          item_name: '{{ p.name|replace("\'", "\\\'") }}',
+          item_category: '{{ p.category|replace("\'", "\\\'") }}',
+          price: {{ p.price }},
+          quantity: 1
+        }]
+      }
+    });
+  }
+</script>
+{% endif %}
 {% endblock %}
