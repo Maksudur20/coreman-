@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
-  <rect width="900" height="1200" fill="#f5f5f1"/>
-  <rect x="140" y="120" width="620" height="960" rx="28" fill="#ffffff" stroke="#d9d7d2" stroke-width="8"/>
-  <path d="M280 230 L360 180 L540 180 L620 230 L660 330 L600 370 L560 290 L340 290 L300 370 L240 330 Z" fill="#ededeb"/>
-  <rect x="360" y="290" width="180" height="400" fill="#f1f1ef"/>
-  <path d="M260 700 L180 1050 L280 1090 L350 820 L550 820 L620 1090 L720 1050 L640 700 Z" fill="#111111" opacity="0.9"/>
-  <text x="450" y="1085" font-size="54" text-anchor="middle" fill="#111111" font-family="Arial, sans-serif" font-weight="700">Premium White Shirt</text>
-</svg>
