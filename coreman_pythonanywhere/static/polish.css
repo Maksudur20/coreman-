@@ -17,7 +17,6 @@ body {
   background-color: #faf9f6 !important;
   background-image: radial-gradient(circle at top left, rgba(20, 20, 20, 0.04), transparent 30%), linear-gradient(180deg, #fdfcfb 0%, #f6f3ef 100%) !important;
   background-repeat: no-repeat !important;
-  background-attachment: fixed !important;
   background-size: cover !important;
 }
 
@@ -55,6 +54,9 @@ main, .page, .shop, .success, .auth-shell, .admin-shell, .product {
   padding-inline: max(5%, calc((100% - 1320px) / 2));
   border-bottom-color: var(--core-line);
   box-shadow: 0 5px 22px rgba(23, 26, 24, 0.035);
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .logo {

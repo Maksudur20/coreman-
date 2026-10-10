@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCategoryFilters();
   initCheckoutDistrictSync();
   initStoreFlashAutoDismiss();
+  initSmoothScroll();
 });
 
 // Toast Manager
@@ -708,5 +709,52 @@ function dismissStoreFlash(el) {
       }
     }, 400);
   }, 400);
+}
+
+// High-Performance Smooth Anchor Navigation
+function initSmoothScroll() {
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href^="#"], a[href^="/#"]');
+    if (!link) return;
+
+    const href = link.getAttribute('href');
+    if (!href || href === '#' || href === '/#') return;
+
+    const hash = href.includes('#') ? '#' + href.split('#')[1] : null;
+    if (!hash) return;
+
+    const isHomePage = (window.location.pathname === '/' || window.location.pathname === '');
+    const targetEl = document.querySelector(hash);
+
+    // If clicking an in-page anchor while already on the home page, scroll smoothly with header offset
+    if (isHomePage && targetEl) {
+      e.preventDefault();
+      const header = document.querySelector('.topbar') || document.querySelector('header');
+      const headerHeight = header ? header.offsetHeight : 80;
+      const targetPos = targetEl.getBoundingClientRect().top + window.pageYOffset - headerHeight;
+      window.scrollTo({
+        top: Math.max(0, targetPos),
+        behavior: 'smooth'
+      });
+      history.pushState(null, '', hash);
+    }
+  });
+
+  // If page loaded with a hash (e.g. navigating from /cart to /#shop)
+  if (window.location.hash) {
+    const hash = window.location.hash;
+    const target = document.querySelector(hash);
+    if (target) {
+      requestAnimationFrame(() => {
+        const header = document.querySelector('.topbar') || document.querySelector('header');
+        const headerHeight = header ? header.offsetHeight : 80;
+        const targetPos = target.getBoundingClientRect().top + window.pageYOffset - headerHeight;
+        window.scrollTo({
+          top: Math.max(0, targetPos),
+          behavior: 'auto'
+        });
+      });
+    }
+  }
 }
 
